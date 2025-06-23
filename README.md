@@ -226,4 +226,4 @@ This project is developed for educational and business purposes. Please ensure c
 
 ---
 
-**Built with ❤️ using Pure PHP, MySQL & Vanilla JS** 
+**Built with ❤️ using Pure PHP, MySQL & Vanilla JS**
