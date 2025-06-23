@@ -1,0 +1,718 @@
+/* XOBO-MART INSPIRED DESIGN SYSTEM - TOP 1% E-COMMERCE DESIGN */
+
+/* ========== RESET & BASE STYLES ========== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* ========== XOBO-MART COLOR SYSTEM ========== */
+:root {
+    --xobo-primary: #16234d;
+    --xobo-primary-hover: #1a2654;
+    --xobo-background: #f5f5f5;
+    --xobo-white: #ffffff;
+    --xobo-light-gray: #f8f9fa;
+    --xobo-gray: #666666;
+    --xobo-border: #ddd;
+    --xobo-shadow: rgba(0, 0, 0, 0.1);
+    --xobo-accent: #e53935;
+    --xobo-success: #27ae60;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+/* ========== NAVIGATION - XOBO-MART STYLE ========== */
+.header {
+    background: var(--xobo-white);
+    box-shadow: 0 2px 4px var(--xobo-shadow);
+    position: sticky;
+    top: 0;
+    z-index: 3000;
+    height: 80px;
+}
+
+.header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 80px;
+    padding: 0 5rem;
+}
+
+/* Logo Styling - Xobo-Mart Approach */
+.nav-brand {
+    margin-right: 2rem;
+}
+
+.nav-brand a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.nav-brand .logo {
+    width: 5vw;
+    height: auto;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.nav-brand .logo:hover {
+    transform: scale(1.05);
+}
+
+/* Navigation Menu - Clean & Professional */
+.nav {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex: 1;
+    margin-left: 2rem;
+}
+
+.nav a {
+    text-decoration: none;
+    color: var(--xobo-primary);
+    font-weight: 500;
+    font-size: 16px;
+    transition: color 0.3s ease;
+    padding: 0.5rem 0;
+}
+
+.nav a:hover {
+    color: var(--xobo-primary-hover);
+}
+
+/* Search Container - Professional Design */
+.search-container {
+    position: relative;
+    width: 100%;
+    max-width: 400px;
+    margin: 0 2rem;
+}
+
+.search-container form {
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.search-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--xobo-border);
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    padding-right: 45px;
+    background: var(--xobo-white);
+}
+
+.search-input:focus {
+    border-color: var(--xobo-primary);
+    box-shadow: 0 0 0 2px rgba(22, 35, 77, 0.1);
+}
+
+.search-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--xobo-gray);
+    transition: color 0.3s;
+}
+
+.search-btn:hover {
+    color: var(--xobo-primary);
+}
+
+/* Navigation Right Side */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Cart Link - Professional Style */
+.cart-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    color: var(--xobo-primary);
+    font-size: 20px;
+    text-decoration: none;
+    margin-right: 2rem;
+    transition: color 0.3s;
+}
+
+.cart-link:hover {
+    color: var(--xobo-primary-hover);
+}
+
+.cart-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--xobo-primary);
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+    line-height: 1.2;
+}
+
+/* User Menu - Xobo-Mart Style */
+.user-dropdown {
+    position: relative;
+}
+
+.user-dropdown-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    color: var(--xobo-primary);
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.user-dropdown-btn:hover {
+    background: var(--xobo-light-gray);
+    color: var(--xobo-primary-hover);
+}
+
+.user-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--xobo-white);
+    border: 1px solid var(--xobo-border);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px var(--xobo-shadow);
+    min-width: 200px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.user-dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.user-info {
+    padding: 12px 16px;
+    background: var(--xobo-light-gray);
+    border-bottom: 1px solid var(--xobo-border);
+}
+
+.welcome-text {
+    display: block;
+    font-size: 12px;
+    color: var(--xobo-gray);
+    margin-bottom: 2px;
+}
+
+.user-email {
+    display: block;
+    font-size: 14px;
+    color: var(--xobo-primary);
+    font-weight: 600;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    color: var(--xobo-gray);
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.dropdown-item:hover {
+    background: var(--xobo-light-gray);
+    color: var(--xobo-primary);
+}
+
+.dropdown-item.logout-btn {
+    color: var(--xobo-accent);
+    border-top: 1px solid var(--xobo-border);
+}
+
+.dropdown-item.logout-btn:hover {
+    background: #fef2f2;
+}
+
+/* Auth Links */
+.auth-link {
+    color: var(--xobo-primary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 16px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.auth-link:hover {
+    background: var(--xobo-light-gray);
+    color: var(--xobo-primary-hover);
+}
+
+.auth-separator {
+    color: var(--xobo-border);
+    margin: 0 0.5rem;
+}
+
+/* ========== HERO SECTION - XOBO-MART INSPIRED ========== */
+.hero-banner {
+    background: var(--xobo-primary);
+    color: white;
+    padding: 5rem 2rem;
+    text-align: center;
+    border-radius: 10px;
+    margin: 2rem 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.hero-text h1 {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    line-height: 1.2;
+}
+
+.hero-text p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.hero-search {
+    display: flex;
+    max-width: 500px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.hero-search-input {
+    flex: 1;
+    padding: 16px 20px;
+    border: none;
+    font-size: 16px;
+    outline: none;
+    color: #333;
+}
+
+.hero-search-btn {
+    padding: 16px 24px;
+    background: var(--xobo-primary-hover);
+    color: white;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    font-size: 16px;
+}
+
+.hero-search-btn:hover {
+    background: #1f2a5a;
+}
+
+/* ========== MAIN CONTENT ========== */
+.main-content {
+    flex: 1;
+    padding: 2rem 0;
+}
+
+/* ========== PRODUCT GRID - XOBO-MART 6-COLUMN SYSTEM ========== */
+.products-section {
+    margin: 2rem 0;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.section-header h2 {
+    color: var(--xobo-primary);
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.section-header p {
+    color: var(--xobo-gray);
+    font-size: 16px;
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.product-card {
+    background: var(--xobo-white);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px var(--xobo-shadow);
+    transition: transform 0.3s ease;
+    text-align: left;
+    padding: 0.5rem;
+    width: 100%;
+    position: relative;
+    cursor: pointer;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.product-image {
+    width: 100%;
+    height: 150px;
+    background: var(--xobo-light-gray);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.product-image-placeholder {
+    font-size: 60px;
+    color: var(--xobo-gray);
+    opacity: 0.8;
+}
+
+.product-info {
+    padding: 0.5rem;
+}
+
+.product-info h3 {
+    font-size: 0.9rem;
+    color: #333;
+    margin-bottom: 0.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+.product-rating {
+    font-size: 0.8rem;
+    color: var(--xobo-gray);
+    margin-bottom: 0.3rem;
+}
+
+.product-price {
+    font-size: 0.93rem;
+    color: var(--xobo-primary);
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+/* Discount Labels - Xobo-Mart Style */
+.discount-label {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: var(--xobo-accent);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 5;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.price-current {
+    font-weight: bold;
+    color: var(--xobo-primary);
+    font-size: 16px;
+}
+
+.price-original {
+    text-decoration: line-through;
+    color: var(--xobo-gray);
+    font-size: 14px;
+    margin-left: 8px;
+}
+
+/* ========== BUTTONS - PROFESSIONAL STYLE ========== */
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--xobo-primary);
+    color: white;
+}
+
+.btn:hover {
+    background: var(--xobo-primary-hover);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: var(--xobo-white);
+    color: var(--xobo-primary);
+    border: 2px solid var(--xobo-primary);
+}
+
+.btn-secondary:hover {
+    background: var(--xobo-primary);
+    color: white;
+}
+
+/* ========== FORMS - CLEAN DESIGN ========== */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--xobo-primary);
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--xobo-border);
+    border-radius: 4px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    border-color: var(--xobo-primary);
+    box-shadow: 0 0 0 2px rgba(22, 35, 77, 0.1);
+}
+
+/* ========== FOOTER - XOBO-MART STYLE ========== */
+.footer {
+    background: var(--xobo-white);
+    padding: 1rem 0;
+    margin-top: 3rem;
+    border-top: 1px solid var(--xobo-border);
+    width: 100%;
+}
+
+.footer-bottom {
+    text-align: center;
+    color: var(--xobo-gray);
+    font-size: 14px;
+}
+
+.footer-bottom a {
+    color: var(--xobo-primary);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+.footer-bottom a:hover {
+    text-decoration: underline;
+}
+
+/* ========== ALERTS & NOTIFICATIONS ========== */
+.alert {
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-size: 14px;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* ========== RESPONSIVE DESIGN ========== */
+@media (max-width: 1400px) {
+    .products-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+    
+    .header .container {
+        padding: 0 2rem;
+    }
+}
+
+@media (max-width: 1200px) {
+    .products-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .products-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .hero-text h1 {
+        font-size: 2rem;
+    }
+    
+    .header .container {
+        flex-direction: column;
+        height: auto;
+        padding: 1rem;
+        gap: 1rem;
+    }
+    
+    .search-container {
+        margin: 0;
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .hero-text h1 {
+        font-size: 1.8rem;
+    }
+    
+    .hero-banner {
+        padding: 3rem 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .products-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+    }
+    
+    .hero-text h1 {
+        font-size: 1.5rem;
+    }
+    
+    .container {
+        padding: 0 1rem;
+    }
+}
+
+/* ========== UTILITY CLASSES ========== */
+.text-center { text-align: center; }
+.text-primary { color: var(--xobo-primary); }
+.text-gray { color: var(--xobo-gray); }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+
+/* ========== ANIMATIONS ========== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+/* ========== LOADING STATES ========== */
+.loading {
+    position: relative;
+    color: transparent;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--xobo-border);
+    border-top: 2px solid var(--xobo-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+} 
