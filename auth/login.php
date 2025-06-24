@@ -8,7 +8,7 @@ if (isLoggedIn()) {
     if (isAdmin($pdo)) {
         header('Location: /xobo-vision/admin/dashboard.php');
     } else {
-        header('Location: /xobo-vision/company-home.php');
+        header('Location: /xobo-vision/index.php');
     }
     exit;
 }
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         header('Location: /xobo-vision/admin/dashboard.php');
                     } else {
                         // Redirect users to company-specific homepage
-                        header('Location: /xobo-vision/company-home.php');
+                        header('Location: /xobo-vision/index.php');
                     }
                     exit;
                 }
@@ -63,9 +63,18 @@ include '../includes/header.php';
 ?>
 
 <style>
+/* Center the login page vertically */
+.main-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 160px); /* Full height minus header and footer */
+    padding: 2rem 0;
+}
+
 .login-container {
     max-width: 600px;
-    margin: 4rem auto;
+    margin: 0 auto;
     padding: 2rem;
     background: var(--xobo-white);
     border-radius: 8px;
@@ -145,49 +154,16 @@ include '../includes/header.php';
     border: 1px solid #fecaca;
 }
 
-.login-links {
-    text-align: center;
-    margin-top: 1.5rem;
-}
 
-.login-links a {
-    color: var(--xobo-primary);
-    text-decoration: none;
-    font-size: 0.9rem;
-}
-
-.login-links a:hover {
-    text-decoration: underline;
-}
-
-.divider {
-    margin: 1.5rem 0;
-    text-align: center;
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.divider::before,
-.divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--xobo-border);
-}
-
-.divider span {
-    padding: 0 1.5rem;
-    color: var(--xobo-gray);
-    font-size: 0.9rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
 
 @media (max-width: 768px) {
+    .main-content {
+        min-height: calc(100vh - 120px); /* Adjust for smaller header on mobile */
+        padding: 1rem 0;
+    }
+    
     .login-container {
-        margin: 2rem 1rem;
+        margin: 0 1rem;
         padding: 1.5rem;
     }
 }
@@ -219,14 +195,5 @@ include '../includes/header.php';
 
         <button type="submit" class="btn-login">Sign In</button>
     </form>
-
-    <div class="divider">
-        <span>or</span>
-    </div>
-
-    <div class="login-links">
-        <p>Don't have an account? <a href="signup.php">Create Account</a></p>
-    </div>
 </div>
 
-<?php include '../includes/footer.php'; ?> 

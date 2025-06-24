@@ -73,8 +73,7 @@ xobo-vision/
 │   └── auth/
 │       ├── login.php           # User login
 │       ├── logout.php          # Session cleanup
-│       ├── signup.php          # Company registration
-│       └── register_user.php   # End user registration
+│       └── register_user.php   # End user registration (by invitation)
 │
 ├── 👑 SUPER ADMIN
 │   └── admin/
@@ -113,14 +112,13 @@ xobo-vision/
 
 ## 🔄 Complete User Flows
 
-### Flow 1: Company Registration & Approval
+### Flow 1: Company Creation & Setup
 ```
-1. Company Admin visits signup.php
-2. Fills company details + admin email
-3. System creates company (status: pending)
-4. Super Admin logs in → sees pending company
-5. Super Admin approves company
-6. Company Admin can now login and manage products
+1. Super Admin creates company via admin dashboard
+2. Super Admin invites company admin via invite system
+3. Company Admin receives invitation and creates account
+4. Company Admin can now login and manage products
+5. Company Admin can invite end users to join the company
 ```
 
 ### Flow 2: End User Registration & Shopping

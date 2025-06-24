@@ -103,7 +103,7 @@ xobo-vision/
 ├── auth/
 │   ├── login.php             # User authentication
 │   ├── logout.php            # Session termination
-│   └── signup.php            # Company registration
+│   └── register_user.php     # End user registration (by invitation)
 ├── admin/
 │   └── dashboard.php         # Super admin panel
 ├── company/
