@@ -184,7 +184,7 @@ function renderCheckout() {
                     </div>
                     
                     <div class="form-actions">
-                        <a href="cart.php" class="btn btn-secondary">Back to Cart</a>
+                        <a href="shop/cart.php" class="btn btn-secondary">Back to Cart</a>
                         <button type="submit" name="place_order" class="btn btn-primary btn-large">
                             Place Order - ${formatCurrency(totalCost)}
                         </button>

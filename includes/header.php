@@ -15,54 +15,13 @@ require_once __DIR__ . '/../config/db.php';
     <link rel="stylesheet" href="/xobo-vision/assets/css/style.css">
 </head>
 <body>
-    <!-- XOBO-MART STYLE NAVIGATION -->
+    <!-- SIMPLIFIED NAVIGATION - LOGO ONLY -->
     <nav class="header">
         <div class="container">
             <div class="nav-brand">
                 <a href="/xobo-vision/">
                     <img src="/xobo-vision/assets/images/xobo-logo.png" alt="XOBO MART" class="logo">
                 </a>
-            </div>
-            
-            <div class="search-container">
-                <form action="/xobo-vision/catalog.php" method="get">
-                    <input type="text" name="search" class="search-input" placeholder="Search products...">
-                    <button type="submit" class="search-btn">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </form>
-            </div>
-            
-            <div class="nav-right">
-                <!-- Cart Menu -->
-                <div class="cart-menu" id="cart-menu">
-                    <a href="/xobo-vision/cart.php" class="cart-link">
-                        <i class="fas fa-shopping-cart"></i>
-                        <span class="cart-count" id="cart-count">0</span>
-                    </a>
-                </div>
-                
-                <!-- User Menu -->
-                <div class="user-menu" id="user-menu">
-                    <?php if (isLoggedIn()): ?>
-                        <div class="user-dropdown-toggle">
-                            <i class="fas fa-user-circle"></i>
-                        </div>
-                        <div class="user-dropdown-menu" id="user-dropdown-menu">
-                            <div class="user-welcome">
-                                <div class="welcome-text">Welcome back!</div>
-                                <div class="user-email"><?php echo htmlspecialchars($_SESSION['email']); ?></div>
-                            </div>
-                            <a class="dropdown-item logout-btn" href="/xobo-vision/auth/logout.php">
-                                <i class="fas fa-sign-out-alt"></i> Log Out
-                            </a>
-                        </div>
-                    <?php else: ?>
-                        <a href="/xobo-vision/auth/login.php" class="auth-link">
-                            <i class="fas fa-user"></i> Login
-                        </a>
-                    <?php endif; ?>
-                </div>
             </div>
         </div>
     </nav>
@@ -215,198 +174,26 @@ console.log('User ID: <?php echo isset($_SESSION['user_id']) ? $_SESSION['user_i
 </script>
 
 <style>
-/* XOBO-MART NAVIGATION IMPROVED SPACING & ALIGNMENT */
+/* SIMPLIFIED NAVIGATION - LOGO POSITIONED LEFT */
 .header .container {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     height: 80px;
-    padding: 0 3rem;
-    gap: 2rem;
+    padding: 0 2rem;
 }
 
 .nav-brand {
     flex-shrink: 0;
 }
 
-.search-container {
-    flex: 1;
-    max-width: 600px;
-    margin: 0 2rem;
+/* Logo styling for simplified navigation */
+.nav-brand .logo {
+    transition: transform 0.3s ease;
 }
 
-.nav-right {
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    flex-shrink: 0;
-}
-
-/* Cart Menu Improved Styling */
-.cart-menu {
-    position: relative;
-}
-
-.cart-link {
-    display: flex;
-    align-items: center;
-    color: var(--xobo-primary);
-    text-decoration: none;
-    font-size: 1.2rem;
-    transition: all 0.3s;
-    padding: 0.5rem;
-    border-radius: 50%;
-}
-
-.cart-link:hover {
-    color: var(--xobo-primary-hover);
-    background: var(--xobo-light-gray);
-}
-
-.cart-count {
-    position: absolute;
-    top: -5px;
-    right: -5px;
-    background: var(--xobo-accent);
-    color: white;
-    border-radius: 50%;
-    padding: 2px 6px;
-    font-size: 0.7rem;
-    font-weight: bold;
-    min-width: 18px;
-    text-align: center;
-    line-height: 1.2;
-    border: 2px solid white;
-}
-
-/* User Menu - Xobo-Mart Style */
-.user-menu {
-    position: relative;
-}
-
-.user-dropdown-toggle {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 50%;
-    transition: all 0.3s;
-}
-
-.user-dropdown-toggle:hover {
-    background: var(--xobo-light-gray);
-}
-
-.user-dropdown-toggle i {
-    font-size: 1.5rem;
-    color: var(--xobo-primary);
-    transition: color 0.3s;
-}
-
-.user-dropdown-toggle:hover i {
-    color: var(--xobo-primary-hover);
-}
-
-.user-dropdown-menu {
-    display: none;
-    position: absolute;
-    top: 100%;
-    right: 0;
-    background: var(--xobo-white);
-    box-shadow: 0 4px 12px var(--xobo-shadow);
-    border-radius: 8px;
-    overflow: hidden;
-    z-index: 1000;
-    min-width: 220px;
-    border: 1px solid var(--xobo-border);
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
-}
-
-.user-dropdown-menu.show {
-    display: block;
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.user-dropdown-menu .dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 1rem;
-    text-decoration: none;
-    font-size: 0.9rem;
-    color: var(--xobo-gray);
-    transition: all 0.3s;
-    border-bottom: 1px solid var(--xobo-border);
-}
-
-.user-dropdown-menu .dropdown-item:last-child {
-    border-bottom: none;
-}
-
-.user-dropdown-menu .dropdown-item:hover {
-    background: var(--xobo-light-gray);
-    color: var(--xobo-primary);
-}
-
-.user-dropdown-menu .dropdown-item i {
-    width: 16px;
-    text-align: center;
-    font-size: 0.9rem;
-}
-
-.user-welcome {
-    padding: 1rem;
-    background: var(--xobo-light-gray);
-    border-bottom: 1px solid var(--xobo-border);
-    text-align: center;
-}
-
-.welcome-text {
-    font-size: 0.8rem;
-    color: var(--xobo-gray);
-    margin-bottom: 0.3rem;
-    font-weight: 500;
-}
-
-.user-email {
-    font-size: 0.9rem;
-    color: var(--xobo-primary);
-    font-weight: 600;
-    word-break: break-word;
-}
-
-.logout-btn:hover {
-    background: #fef2f2 !important;
-    color: var(--xobo-accent) !important;
-}
-
-/* Auth Link with Icon */
-.auth-link {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--xobo-primary);
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 1rem;
-    padding: 0.75rem 1.25rem;
-    border: 2px solid var(--xobo-primary);
-    border-radius: 6px;
-    transition: all 0.3s;
-}
-
-.auth-link:hover {
-    background: var(--xobo-primary);
-    color: white;
-}
-
-.auth-link i {
-    font-size: 1rem;
+.nav-brand .logo:hover {
+    transform: scale(1.05);
 }
 
 /* Mobile Responsive - Improved */

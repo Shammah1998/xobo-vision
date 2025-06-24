@@ -260,7 +260,6 @@ include '../includes/header.php';
 
     <div class="register-links">
         <p>Already have an account? <a href="login.php">Sign In</a></p>
-        <p><a href="signup.php">Create Company Account</a></p>
     </div>
 </div>
 
