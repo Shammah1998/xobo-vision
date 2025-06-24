@@ -65,6 +65,40 @@ CREATE TABLE cart_items (
   UNIQUE KEY unique_user_product (user_id, product_id)
 );
 
+-- Delivery details for cart items and orders
+CREATE TABLE delivery_details (
+  id                INT AUTO_INCREMENT PRIMARY KEY,
+  user_id           INT NOT NULL,
+  product_id        INT NOT NULL,
+  session_id        VARCHAR(255),
+  destination       VARCHAR(500) NULL,
+  company_name      VARCHAR(255) NULL,
+  company_address   TEXT NULL,
+  recipient_name    VARCHAR(255) NULL,
+  recipient_phone   VARCHAR(20) NULL,
+  created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (product_id) REFERENCES products(id),
+  UNIQUE KEY unique_user_product_session (user_id, product_id, session_id)
+);
+
+-- Order delivery details (for completed orders)
+CREATE TABLE order_delivery_details (
+  id                INT AUTO_INCREMENT PRIMARY KEY,
+  order_id          INT NOT NULL,
+  product_id        INT NOT NULL,
+  destination       VARCHAR(500) NULL,
+  company_name      VARCHAR(255) NULL,
+  company_address   TEXT NULL,
+  recipient_name    VARCHAR(255) NULL,
+  recipient_phone   VARCHAR(20) NULL,
+  created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id),
+  FOREIGN KEY (product_id) REFERENCES products(id),
+  UNIQUE KEY unique_order_product (order_id, product_id)
+);
+
 -- Insert default super admin user
 INSERT INTO users (email, password, role) VALUES 
 ('admin@xobo.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin');

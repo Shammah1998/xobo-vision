@@ -12,19 +12,7 @@ $error = '';
 
 // Handle cart updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['update_cart'])) {
-        foreach ($_POST['quantities'] as $productId => $quantity) {
-            $productId = (int)$productId;
-            $quantity = (int)$quantity;
-            
-            if ($quantity <= 0) {
-                unset($_SESSION['cart'][$productId]);
-            } else {
-                $_SESSION['cart'][$productId] = $quantity;
-            }
-        }
-        $message = 'Cart updated successfully!';
-    } elseif (isset($_POST['remove_item'])) {
+    if (isset($_POST['remove_item'])) {
         $productId = (int)$_POST['product_id'];
         unset($_SESSION['cart'][$productId]);
         $message = 'Item removed from cart!';
@@ -35,6 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $productId = (int)$productId;
                 if (isset($_SESSION['cart'][$productId])) {
                     unset($_SESSION['cart'][$productId]);
+                    // Also remove delivery details for this product
+                    $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND product_id = ? AND session_id = ?");
+                    $stmt->execute([$userId, $productId, session_id()]);
                     $deletedCount++;
                 }
             }
@@ -43,6 +34,117 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } else {
             $error = "You haven't selected any item";
+        }
+    } elseif (isset($_POST['save_delivery_details'])) {
+        // Handle saving delivery details
+        $productId = (int)$_POST['product_id'];
+        $destination = sanitize($_POST['destination'] ?? '');
+        $companyName = sanitize($_POST['company_name'] ?? '');
+        $companyAddress = sanitize($_POST['company_address'] ?? '');
+        $recipientName = sanitize($_POST['recipient_name'] ?? '');
+        $recipientPhone = sanitize($_POST['recipient_phone'] ?? '');
+        
+        // Check if any detail is provided
+        if (!empty($destination) || !empty($companyName) || !empty($companyAddress) || !empty($recipientName) || !empty($recipientPhone)) {
+            $stmt = $pdo->prepare("INSERT INTO delivery_details (user_id, product_id, session_id, destination, company_name, company_address, recipient_name, recipient_phone) 
+                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
+                                   ON DUPLICATE KEY UPDATE 
+                                   destination = VALUES(destination), 
+                                   company_name = VALUES(company_name), 
+                                   company_address = VALUES(company_address), 
+                                   recipient_name = VALUES(recipient_name), 
+                                   recipient_phone = VALUES(recipient_phone),
+                                   updated_at = CURRENT_TIMESTAMP");
+            $stmt->execute([$userId, $productId, session_id(), $destination, $companyName, $companyAddress, $recipientName, $recipientPhone]);
+            $message = "Delivery details saved successfully!";
+        } else {
+            // Delete if all fields are empty
+            $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND product_id = ? AND session_id = ?");
+            $stmt->execute([$userId, $productId, session_id()]);
+            $message = "Delivery details cleared!";
+        }
+    } elseif (isset($_POST['delete_delivery_details'])) {
+        // Handle deleting delivery details
+        $productId = (int)$_POST['product_id'];
+        $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND product_id = ? AND session_id = ?");
+        $stmt->execute([$userId, $productId, session_id()]);
+        $message = "Delivery details deleted successfully!";
+    } elseif (isset($_POST['confirm_order'])) {
+        // Handle order confirmation - save everything to database
+        if (empty($_SESSION['cart'])) {
+            $error = "Your cart is empty!";
+        } else {
+            try {
+                $pdo->beginTransaction();
+                
+                // Calculate total cost
+                $productIds = array_keys($_SESSION['cart']);
+                $placeholders = str_repeat('?,', count($productIds) - 1) . '?';
+                
+                $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders) AND company_id = ?");
+                $stmt->execute(array_merge($productIds, [$companyId]));
+                $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                $totalCost = 0;
+                $orderItems = [];
+                
+                foreach ($products as $product) {
+                    $quantity = $_SESSION['cart'][$product['id']];
+                    $lineTotal = $quantity * $product['rate_ksh'];
+                    $totalCost += $lineTotal;
+                    
+                    $orderItems[] = [
+                        'product_id' => $product['id'],
+                        'quantity' => $quantity,
+                        'line_total' => $lineTotal
+                    ];
+                }
+                
+                // Insert main order
+                $stmt = $pdo->prepare("INSERT INTO orders (user_id, company_id, total_ksh, created_at) VALUES (?, ?, ?, NOW())");
+                $stmt->execute([$userId, $companyId, $totalCost]);
+                $orderId = $pdo->lastInsertId();
+                
+                // Insert order items
+                $stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, quantity, line_total) VALUES (?, ?, ?, ?)");
+                foreach ($orderItems as $item) {
+                    $stmt->execute([$orderId, $item['product_id'], $item['quantity'], $item['line_total']]);
+                }
+                
+                // Get delivery details and save them to order_delivery_details
+                $stmt = $pdo->prepare("SELECT * FROM delivery_details WHERE user_id = ? AND product_id IN ($placeholders) AND session_id = ?");
+                $stmt->execute(array_merge([$userId], $productIds, [session_id()]));
+                $deliveryDetails = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Insert delivery details for the order
+                $stmt = $pdo->prepare("INSERT INTO order_delivery_details (order_id, product_id, destination, company_name, company_address, recipient_name, recipient_phone) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                foreach ($deliveryDetails as $detail) {
+                    $stmt->execute([
+                        $orderId,
+                        $detail['product_id'],
+                        $detail['destination'],
+                        $detail['company_name'],
+                        $detail['company_address'],
+                        $detail['recipient_name'],
+                        $detail['recipient_phone']
+                    ]);
+                }
+                
+                // Clean up cart and delivery details
+                $_SESSION['cart'] = [];
+                $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND session_id = ?");
+                $stmt->execute([$userId, session_id()]);
+                
+                $pdo->commit();
+                
+                // Redirect to receipt page
+                header("Location: order-receipt.php?order_id=" . $orderId);
+                exit;
+                
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = "Failed to process order. Please try again. Error: " . $e->getMessage();
+            }
         }
     } elseif (isset($_POST['action']) && $_POST['action'] === 'add_multiple' && isset($_POST['products'])) {
         // Handle bulk adding of products from index.php
@@ -78,7 +180,7 @@ $stmt->execute([$companyId]);
 $company = $stmt->fetch();
 $companyName = $company ? $company['name'] : 'XOBO MART';
 
-// Get cart items with product details
+// Get cart items with product details and delivery details
 $cartItems = [];
 $totalWeight = 0;
 $totalCost = 0;
@@ -92,6 +194,18 @@ if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
     $stmt->execute(array_merge($productIds, [$companyId]));
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
+    // Get delivery details for all products in cart
+    $deliveryDetails = [];
+    if (!empty($productIds)) {
+        $stmt = $pdo->prepare("SELECT * FROM delivery_details WHERE user_id = ? AND product_id IN ($placeholders) AND session_id = ?");
+        $stmt->execute(array_merge([$userId], $productIds, [session_id()]));
+        $deliveryData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        foreach ($deliveryData as $detail) {
+            $deliveryDetails[$detail['product_id']] = $detail;
+        }
+    }
+    
     foreach ($products as $product) {
         $quantity = $_SESSION['cart'][$product['id']];
         $lineTotal = $quantity * $product['rate_ksh'];
@@ -101,12 +215,22 @@ if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
             'product' => $product,
             'quantity' => $quantity,
             'line_total' => $lineTotal,
-            'line_weight' => $lineWeight
+            'line_weight' => $lineWeight,
+            'delivery_details' => $deliveryDetails[$product['id']] ?? null
         ];
         
         $totalCost += $lineTotal;
         $totalWeight += $lineWeight;
         $totalItems += $quantity;
+    }
+}
+
+// Check if any delivery details exist for validation
+$hasDeliveryDetails = false;
+foreach ($cartItems as $item) {
+    if ($item['delivery_details']) {
+        $hasDeliveryDetails = true;
+        break;
     }
 }
 
@@ -258,7 +382,7 @@ include '../includes/header.php';
     width: 100%;
     border-collapse: collapse;
     margin: 0;
-    min-width: 1000px;
+    min-width: 1100px;
     font-size: 0.9rem;
 }
 
@@ -442,6 +566,130 @@ include '../includes/header.php';
     cursor: not-allowed;
 }
 
+/* Delivery Details Styles */
+.delivery-details-toggle {
+    text-align: center;
+}
+
+.details-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--xobo-primary);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 3px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0 auto;
+    font-size: 0.9rem;
+}
+
+.details-toggle-btn:hover {
+    background: var(--xobo-light-gray);
+    color: var(--xobo-primary-hover);
+}
+
+.details-toggle-btn.expanded i {
+    transform: rotate(180deg);
+}
+
+.status-indicator {
+    font-size: 0.8rem;
+    margin-left: 0.25rem;
+}
+
+.status-indicator.filled {
+    color: var(--xobo-success);
+}
+
+.status-indicator.empty {
+    color: var(--xobo-gray);
+}
+
+.delivery-details-row {
+    background: #f8f9fa;
+    border-top: 2px solid var(--xobo-primary);
+}
+
+.delivery-details-form {
+    padding: 1.5rem;
+    border-radius: 6px;
+    background: white;
+    margin: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.delivery-details-form h4 {
+    color: var(--xobo-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+}
+
+.delivery-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width {
+    grid-column: span 2;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: var(--xobo-primary);
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.form-group input,
+.form-group textarea {
+    padding: 0.5rem;
+    border: 1px solid var(--xobo-border);
+    border-radius: 3px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    border-color: var(--xobo-primary);
+    box-shadow: 0 0 0 2px rgba(22, 35, 77, 0.1);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.delivery-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    padding-top: 1rem;
+    border-top: 1px solid var(--xobo-border);
+}
+
+.delivery-form-actions .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
 .alert {
     padding: 1rem 1.5rem;
     border-radius: 4px;
@@ -529,6 +777,23 @@ include '../includes/header.php';
     .cart-table {
         min-width: 700px;
     }
+    
+    .delivery-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-group.full-width {
+        grid-column: span 1;
+    }
+    
+    .delivery-form-actions {
+        flex-direction: column;
+    }
+    
+    .delivery-form-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
 }
 </style>
 
@@ -598,6 +863,7 @@ include '../includes/header.php';
                                 <th width="100">Unit Price</th>
                                 <th width="100">Quantity</th>
                                 <th width="100">Total</th>
+                                <th width="80">Details</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -635,6 +901,87 @@ include '../includes/header.php';
                                 <td class="line-total">
                                     <?php echo formatCurrency($item['line_total']); ?>
                                 </td>
+                                <td class="delivery-details-toggle">
+                                    <button type="button" class="details-toggle-btn" 
+                                            onclick="toggleDeliveryDetails(<?php echo $item['product']['id']; ?>)"
+                                            data-product-id="<?php echo $item['product']['id']; ?>">
+                                        <i class="fas fa-chevron-down"></i>
+                                        <?php if ($item['delivery_details']): ?>
+                                            <span class="status-indicator filled" title="Delivery details filled">●</span>
+                                        <?php else: ?>
+                                            <span class="status-indicator empty" title="No delivery details">○</span>
+                                        <?php endif; ?>
+                                    </button>
+                                </td>
+                            </tr>
+                            
+                            <!-- Expandable Delivery Details Row -->
+                            <tr class="delivery-details-row" id="delivery-row-<?php echo $item['product']['id']; ?>" style="display: none;">
+                                <td colspan="9">
+                                    <div class="delivery-details-form">
+                                        <h4><i class="fas fa-truck"></i> Delivery Details for <?php echo htmlspecialchars($item['product']['name']); ?></h4>
+                                        <form method="POST" class="delivery-form">
+                                            <input type="hidden" name="product_id" value="<?php echo $item['product']['id']; ?>">
+                                            
+                                            <div class="delivery-form-grid">
+                                                <div class="form-group">
+                                                    <label for="destination_<?php echo $item['product']['id']; ?>">
+                                                        <i class="fas fa-map-marker-alt"></i> Destination
+                                                    </label>
+                                                    <input type="text" id="destination_<?php echo $item['product']['id']; ?>" 
+                                                           name="destination" placeholder="Where is this item going?"
+                                                           value="<?php echo htmlspecialchars($item['delivery_details']['destination'] ?? ''); ?>">
+                                                </div>
+                                                
+                                                <div class="form-group">
+                                                    <label for="company_name_<?php echo $item['product']['id']; ?>">
+                                                        <i class="fas fa-building"></i> Company Name
+                                                    </label>
+                                                    <input type="text" id="company_name_<?php echo $item['product']['id']; ?>" 
+                                                           name="company_name" placeholder="Receiving company name"
+                                                           value="<?php echo htmlspecialchars($item['delivery_details']['company_name'] ?? ''); ?>">
+                                                </div>
+                                                
+                                                <div class="form-group full-width">
+                                                    <label for="company_address_<?php echo $item['product']['id']; ?>">
+                                                        <i class="fas fa-map"></i> Company Address
+                                                    </label>
+                                                    <textarea id="company_address_<?php echo $item['product']['id']; ?>" 
+                                                              name="company_address" rows="2" 
+                                                              placeholder="Full delivery address"><?php echo htmlspecialchars($item['delivery_details']['company_address'] ?? ''); ?></textarea>
+                                                </div>
+                                                
+                                                <div class="form-group">
+                                                    <label for="recipient_name_<?php echo $item['product']['id']; ?>">
+                                                        <i class="fas fa-user"></i> Recipient Name
+                                                    </label>
+                                                    <input type="text" id="recipient_name_<?php echo $item['product']['id']; ?>" 
+                                                           name="recipient_name" placeholder="Person receiving the item"
+                                                           value="<?php echo htmlspecialchars($item['delivery_details']['recipient_name'] ?? ''); ?>">
+                                                </div>
+                                                
+                                                <div class="form-group">
+                                                    <label for="recipient_phone_<?php echo $item['product']['id']; ?>">
+                                                        <i class="fas fa-phone"></i> Recipient Phone
+                                                    </label>
+                                                    <input type="tel" id="recipient_phone_<?php echo $item['product']['id']; ?>" 
+                                                           name="recipient_phone" placeholder="Contact number"
+                                                           value="<?php echo htmlspecialchars($item['delivery_details']['recipient_phone'] ?? ''); ?>">
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="delivery-form-actions">
+                                                <button type="submit" name="save_delivery_details" class="btn btn-primary">
+                                                    <i class="fas fa-save"></i> Save Details
+                                                </button>
+                                                <button type="button" class="btn btn-danger" 
+                                                        onclick="deleteDeliveryDetails(<?php echo $item['product']['id']; ?>)">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -662,8 +1009,8 @@ include '../includes/header.php';
                         <a href="../index.php" class="btn btn-secondary">
                             <i class="fas fa-home"></i> Home
                         </a>
-                        <button type="submit" name="update_cart" class="btn btn-primary">
-                            <i class="fas fa-check"></i> Confirm
+                        <button type="submit" name="confirm_order" id="confirm-order-btn" class="btn btn-primary">
+                            <i class="fas fa-check"></i> Confirm Order
                         </button>
                     </div>
                 </form>
@@ -840,9 +1187,190 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    // Handle confirm order button
+    const confirmOrderBtn = document.getElementById('confirm-order-btn');
+    if (confirmOrderBtn) {
+        confirmOrderBtn.addEventListener('click', function(e) {
+            if (this.disabled) {
+                e.preventDefault();
+                alert('Please add delivery details for at least one product before confirming your order.');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to confirm this order? This will create your order and generate a receipt.')) {
+                e.preventDefault();
+                return;
+            }
+        });
+    }
+    
+    // Add event listeners to delivery form inputs for real-time validation
+    const deliveryInputs = document.querySelectorAll('.delivery-form input, .delivery-form textarea');
+    deliveryInputs.forEach(input => {
+        input.addEventListener('input', checkDeliveryDetailsAndUpdateButton);
+        input.addEventListener('blur', checkDeliveryDetailsAndUpdateButton);
+    });
+    
+    // Add event listeners to delivery form save buttons to update status indicators
+    const deliveryForms = document.querySelectorAll('.delivery-form');
+    deliveryForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            // Let the form submit normally, but mark that we need to update the indicator
+            const productId = form.querySelector('input[name="product_id"]').value;
+            
+            // Check if any field has content
+            const inputs = form.querySelectorAll('input[type="text"], input[type="tel"], textarea');
+            let hasContent = false;
+            inputs.forEach(input => {
+                if (input.value.trim() !== '') {
+                    hasContent = true;
+                }
+            });
+            
+            if (hasContent) {
+                // Update status indicator immediately for better UX
+                setTimeout(() => {
+                    const statusIndicator = document.querySelector(`[data-product-id="${productId}"] .status-indicator`);
+                    if (statusIndicator) {
+                        statusIndicator.className = 'status-indicator filled';
+                        statusIndicator.title = 'Delivery details filled';
+                        statusIndicator.textContent = '●';
+                    }
+                    checkDeliveryDetailsAndUpdateButton();
+                }, 100);
+            }
+        });
+    });
+    
+    // Initial check for delivery details
+    // Set initial state based on PHP data
+    const confirmBtn = document.getElementById('confirm-order-btn');
+    const hasDeliveryDetailsFromPHP = <?php echo $hasDeliveryDetails ? 'true' : 'false'; ?>;
+    
+    if (confirmBtn) {
+        if (hasDeliveryDetailsFromPHP) {
+            confirmBtn.disabled = false;
+            confirmBtn.title = '';
+            confirmBtn.classList.remove('btn-disabled');
+        } else {
+            confirmBtn.disabled = true;
+            confirmBtn.title = 'Please add delivery details for at least one product';
+            confirmBtn.classList.add('btn-disabled');
+        }
+    }
+    
+    // Also run the JavaScript check
+    checkDeliveryDetailsAndUpdateButton();
+    
+    // Initial state set successfully
 });
 
+// Toggle delivery details section
+function toggleDeliveryDetails(productId) {
+    const row = document.getElementById('delivery-row-' + productId);
+    const button = document.querySelector(`[data-product-id="${productId}"]`);
+    const icon = button.querySelector('i');
+    
+    if (row.style.display === 'none' || row.style.display === '') {
+        row.style.display = 'table-row';
+        button.classList.add('expanded');
+        icon.style.transform = 'rotate(180deg)';
+    } else {
+        row.style.display = 'none';
+        button.classList.remove('expanded');
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
 
+// Delete delivery details
+function deleteDeliveryDetails(productId) {
+    if (confirm('Are you sure you want to delete the delivery details for this product?')) {
+        // First clear the form fields for immediate visual feedback
+        const deliveryRow = document.getElementById('delivery-row-' + productId);
+        if (deliveryRow) {
+            const inputs = deliveryRow.querySelectorAll('input, textarea');
+            inputs.forEach(input => {
+                input.value = '';
+            });
+            
+            // Update the status indicator to empty
+            const statusIndicator = document.querySelector(`[data-product-id="${productId}"] .status-indicator`);
+            if (statusIndicator) {
+                statusIndicator.className = 'status-indicator empty';
+                statusIndicator.title = 'No delivery details';
+                statusIndicator.textContent = '○';
+            }
+            
+            // Close the delivery details section
+            toggleDeliveryDetails(productId);
+            
+            // Update the confirm order button state
+            checkDeliveryDetailsAndUpdateButton();
+        }
+        
+        // Create a form to submit the delete request
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.style.display = 'none';
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'delete_delivery_details';
+        actionInput.value = '1';
+        
+        const productIdInput = document.createElement('input');
+        productIdInput.type = 'hidden';
+        productIdInput.name = 'product_id';
+        productIdInput.value = productId;
+        
+        form.appendChild(actionInput);
+        form.appendChild(productIdInput);
+        document.body.appendChild(form);
+        
+        // Submit the form to save changes to database
+        form.submit();
+    }
+}
+
+// Check if any delivery details exist and update confirm button
+function checkDeliveryDetailsAndUpdateButton() {
+    const confirmBtn = document.getElementById('confirm-order-btn');
+    let hasDetails = false;
+    
+    // Check if any status indicators show filled details (from server-side data)
+    const filledIndicators = document.querySelectorAll('.status-indicator.filled');
+    if (filledIndicators.length > 0) {
+        hasDetails = true;
+    } else {
+        // Also check current form field values for unsaved changes
+        const deliveryForms = document.querySelectorAll('.delivery-form');
+        deliveryForms.forEach(form => {
+            const inputs = form.querySelectorAll('input[type="text"], input[type="tel"], textarea');
+            inputs.forEach(input => {
+                if (input.value.trim() !== '') {
+                    hasDetails = true;
+                }
+            });
+        });
+    }
+    
+    // Button state will be updated below
+    
+    if (confirmBtn) {
+        if (hasDetails) {
+            confirmBtn.disabled = false;
+            confirmBtn.title = '';
+            confirmBtn.classList.remove('btn-disabled');
+        } else {
+            confirmBtn.disabled = true;
+            confirmBtn.title = 'Please add delivery details for at least one product';
+            confirmBtn.classList.add('btn-disabled');
+        }
+    }
+    
+    return hasDetails;
+}
 
 // Add animations
 const style = document.createElement('style');
