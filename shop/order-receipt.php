@@ -635,6 +635,10 @@ $pageTitle = 'Receipt #' . $orderId;
                 color: var(--xobo-gray) !important;
                 font-size: 14px;
             }
+
+            .footer.hide-for-print {
+                display: none !important;
+            }
         }
 
         /* PDF Generation Styles */
@@ -785,27 +789,42 @@ $pageTitle = 'Receipt #' . $orderId;
                 font-size: 0.8rem;
             }
         }
+
+        /* --- PDF/Page Break Enhancements --- */
+        .receipt-header,
+        .table-section,
+        .footer {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .table-section {
+            /* Add margin to help with page breaks */
+            margin-bottom: 1.5rem;
+        }
+        .force-page-break {
+            page-break-before: always;
+            break-before: page;
+        }
+        /* Ensure logo is crisp in PDF */
+        .company-name img {
+            image-rendering: auto;
+            max-width: 120px;
+            width: 120px;
+            height: auto;
+        }
     </style>
 </head>
 <body>
     <!-- Navigation Bar -->
     <nav class="navbar">
-        <div class="navbar-brand">
+        <a href="../index.php" class="navbar-brand">
             <img src="../assets/images/xobo-logo.png" alt="XOBO MART">
-        </div>
+        </a>
         <div class="navbar-actions">
-            <button onclick="window.print()" class="navbar-btn navbar-btn-primary">
-                <i class="fas fa-print"></i>
-                Print
-            </button>
             <button onclick="downloadPDF(event)" class="navbar-btn navbar-btn-primary">
                 <i class="fas fa-download"></i>
                 Download PDF
             </button>
-            <a href="../index.php" class="navbar-btn navbar-btn-secondary">
-                <i class="fas fa-home"></i>
-                Back to Home
-            </a>
         </div>
     </nav>
 
@@ -814,7 +833,11 @@ $pageTitle = 'Receipt #' . $orderId;
         <div class="receipt-header">
             <div class="header-left">
                 <div class="company-name">
-                    <img src="../assets/images/xobo-logo.png" alt="XOBO MART">
+                    <!-- Inline SVG for XOBO logo, styled white for PDF/print compatibility -->
+                    <svg id="xobo-logo-svg" width="80" height="32" viewBox="0 0 160 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+                        <text x="0" y="24" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="bold" fill="white">XOBO</text>
+                        <text x="0" y="48" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="white">Efficient. Faster. Reliable.</text>
+                    </svg>
                 </div>
             </div>
             <div class="header-center">
@@ -942,38 +965,69 @@ $pageTitle = 'Receipt #' . $orderId;
 
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
-        // Print functionality
-        function printReceipt() {
-            window.print();
-        }
-
-        // PDF Download functionality using browser's print-to-PDF
+        // PDF Download functionality using html2pdf.js
         function downloadPDF(event) {
-            const receiptTitle = 'Receipt_<?php echo $orderId; ?>_<?php echo date('Y-m-d', strtotime($order['created_at'])); ?>';
+            event.preventDefault();
+            const receiptTitle = 'Receipt_<?php echo $orderId; ?>_<?php echo date('Y-m-d', strtotime($order['created_at'])); ?>.pdf';
             const button = event.target.closest('button');
-            
-            // Show user instruction and trigger print
             const originalButtonText = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-file-pdf"></i> Opening Print Dialog...';
+            button.innerHTML = '<i class="fas fa-file-pdf"></i> Generating PDF...';
             button.disabled = true;
-            
-            // Set document title for PDF filename
-            const originalTitle = document.title;
-            document.title = receiptTitle;
-            
-            // Brief delay to show the button state change
-            setTimeout(() => {
-                // Trigger print dialog
-                window.print();
-                
-                // Reset button and title after a short delay
-                setTimeout(() => {
+
+            // Select the receipt container
+            const element = document.querySelector('.receipt-container');
+            element.classList.add('pdf-generating');
+
+            // Hide the footer for PDF
+            const footer = document.querySelector('.footer');
+            footer.classList.add('hide-for-print');
+
+            // --- Fix for blank space at the top ---
+            // Save original styles and scroll position
+            const body = document.body;
+            const originalPaddingTop = body.style.paddingTop;
+            const originalBg = body.style.background;
+            const originalScrollY = window.scrollY;
+            // Remove padding and set background for PDF
+            body.style.paddingTop = '0';
+            body.style.background = '#fff';
+            window.scrollTo(0, 0);
+
+            // No need to wait for SVG logo to load
+            generatePDF();
+
+            function generatePDF() {
+                // PDF options
+                const opt = {
+                    margin:       0.3,
+                    filename:     receiptTitle,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#fff' },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(element).save().then(() => {
+                    // Restore styles and scroll
+                    body.style.paddingTop = originalPaddingTop;
+                    body.style.background = originalBg;
+                    window.scrollTo(0, originalScrollY);
+                    element.classList.remove('pdf-generating');
+                    footer.classList.remove('hide-for-print');
                     button.innerHTML = originalButtonText;
                     button.disabled = false;
-                    document.title = originalTitle;
-                }, 1000);
-            }, 300);
+                }).catch(() => {
+                    body.style.paddingTop = originalPaddingTop;
+                    body.style.background = originalBg;
+                    window.scrollTo(0, originalScrollY);
+                    element.classList.remove('pdf-generating');
+                    footer.classList.remove('hide-for-print');
+                    button.innerHTML = originalButtonText;
+                    button.disabled = false;
+                    alert('Failed to generate PDF. Please try again.');
+                });
+            }
         }
 
         // Hide browser headers and footers for printing
@@ -986,7 +1040,6 @@ $pageTitle = 'Receipt #' . $orderId;
             const container = document.querySelector('.receipt-container');
             container.style.opacity = '0';
             container.style.transform = 'translateY(20px)';
-            
             setTimeout(() => {
                 container.style.transition = 'all 0.5s ease-out';
                 container.style.opacity = '1';
@@ -998,13 +1051,9 @@ $pageTitle = 'Receipt #' . $orderId;
         document.addEventListener('keydown', function(e) {
             if (e.ctrlKey || e.metaKey) {
                 switch(e.key) {
-                    case 'p':
-                        e.preventDefault();
-                        window.print();
-                        break;
                     case 's':
                         e.preventDefault();
-                        downloadPDF();
+                        downloadPDF(e);
                         break;
                 }
             }
@@ -1012,7 +1061,7 @@ $pageTitle = 'Receipt #' . $orderId;
     </script>
 
     <!-- XOBO-MART STYLE FOOTER -->
-    <footer class="footer" style="background: white !important; padding: 1rem 0; margin-top: 3rem; border-top: 1px solid var(--xobo-border); width: 100%;">
+    <footer class="footer hide-for-print" style="background: white !important; padding: 1rem 0; margin-top: 3rem; border-top: 1px solid var(--xobo-border); width: 100%;">
         <div class="container" style="max-width: 800px; margin: 0 auto; padding: 0 2rem;">
             <div class="footer-bottom" style="text-align: center; color: var(--xobo-gray); font-size: 14px;">
                 <p>&copy; 2025 XOBO MART. ALL RIGHTS RESERVED.</p>

@@ -10,6 +10,19 @@ $userId = $_SESSION['user_id'];
 $message = '';
 $error = '';
 
+// Add this at the top, after session_start():
+if (isset($_POST['ajax']) && $_POST['ajax'] === 'update_quantity') {
+    $productId = (int)($_POST['product_id'] ?? 0);
+    $quantity = (int)($_POST['quantity'] ?? 1);
+    if ($productId > 0 && $quantity > 0) {
+        $_SESSION['cart'][$productId] = $quantity;
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false]);
+    }
+    exit;
+}
+
 // Handle cart updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['remove_item'])) {
@@ -1035,6 +1048,13 @@ function updateQuantity(productId, change) {
     
     // Update prices automatically
     updateLineTotalAndCart(productId, newValue);
+    
+    // AJAX update session
+    fetch('cart.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `ajax=update_quantity&product_id=${productId}&quantity=${newValue}`
+    });
 }
 
 // Function to update line total and cart totals
@@ -1271,7 +1291,18 @@ function toggleDeliveryDetails(productId) {
     const row = document.getElementById('delivery-row-' + productId);
     const button = document.querySelector(`[data-product-id="${productId}"]`);
     const icon = button.querySelector('i');
-    
+
+    // --- Sync the hidden quantity field with the main cart quantity input ---
+    const mainQtyInput = document.getElementById('qty_' + productId);
+    const deliveryForm = row.querySelector('form.delivery-form');
+    if (mainQtyInput && deliveryForm) {
+        const hiddenQtyInput = deliveryForm.querySelector('input[name="quantity"]');
+        if (hiddenQtyInput) {
+            hiddenQtyInput.value = mainQtyInput.value;
+        }
+    }
+    // ----------------------------------------------------------------------
+
     if (row.style.display === 'none' || row.style.display === '') {
         row.style.display = 'table-row';
         button.classList.add('expanded');

@@ -6,607 +6,429 @@ require_once '../includes/functions.php';
 requireRole(['user']);
 
 $userId = $_SESSION['user_id'];
+$companyId = $_SESSION['company_id'];
 $success = isset($_GET['success']) ? 'Order placed successfully!' : '';
 
-// Sample orders for demo (you can replace with actual database orders)
-$orders = [
-    [
-        'id' => 1,
-        'total_ksh' => 25500.00,
-        'company_name' => 'Tech Store',
-        'created_at' => '2024-12-01 10:30:00',
-        'status' => 'delivered',
-        'address' => 'Nairobi, Kenya\nWestlands Area\nBuilding 123, Floor 4',
-        'items' => 'HP Laptop (1x @23000), HP Computer Mouse (1x @400)',
-        'tracking_number' => 'XB24120001'
-    ],
-    [
-        'id' => 2,
-        'total_ksh' => 4900.00,
-        'company_name' => 'Fashion Hub',
-        'created_at' => '2024-11-28 14:15:00',
-        'status' => 'shipped',
-        'address' => 'Mombasa, Kenya\nNyali Area\nApartment 567',
-        'items' => 'Tom Ford Fashion Bag (1x @3400), Sport & fashion sneakers (1x @1500)',
-        'tracking_number' => 'XB24112801'
-    ],
-    [
-        'id' => 3,
-        'total_ksh' => 1375.00,
-        'company_name' => 'Watch Center',
-        'created_at' => '2024-11-25 09:45:00',
-        'status' => 'processing',
-        'address' => 'Kisumu, Kenya\nMilimani Estate\nHouse 89',
-        'items' => 'Michael Kors men\'s watch (1x @1375)',
-        'tracking_number' => 'XB24112502'
-    ],
-    [
-        'id' => 4,
-        'total_ksh' => 800.00,
-        'company_name' => 'Audio World',
-        'created_at' => '2024-11-20 16:20:00',
-        'status' => 'pending',
-        'address' => 'Nakuru, Kenya\nMilele Estate\nHouse 234',
-        'items' => 'Black Earpods (1x @800)',
-        'tracking_number' => 'XB24112003'
-    ]
-];
+if (empty($companyId)) {
+    header('Location: /xobo-vision/auth/login.php?error=' . urlencode('You must be associated with a company to view orders.'));
+    exit;
+}
 
-$pageTitle = 'My Orders - XOBO MART';
+// Fetch orders for the user's company from the database
+$stmt = $pdo->prepare("
+    SELECT o.*, c.name AS company_name, u.email AS user_email
+    FROM orders o
+    JOIN companies c ON o.company_id = c.id
+    JOIN users u ON o.user_id = u.id
+    WHERE o.company_id = ?
+    ORDER BY o.created_at DESC
+");
+$stmt->execute([$companyId]);
+$db_orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$orders = [];
+if (!empty($db_orders)) {
+    $orderIds = array_column($db_orders, 'id');
+
+    // Fetch all order items for these orders in a single query
+    $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+    $stmt_items = $pdo->prepare("
+        SELECT oi.order_id, oi.product_id, oi.quantity, p.name, p.rate_ksh
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id IN ($placeholders)
+    ");
+    $stmt_items->execute($orderIds);
+    $db_order_items = $stmt_items->fetchAll(PDO::FETCH_ASSOC);
+
+    // Fetch all delivery details for these orders
+    $stmt_delivery = $pdo->prepare("
+        SELECT * FROM order_delivery_details WHERE order_id IN ($placeholders)
+    ");
+    $stmt_delivery->execute($orderIds);
+    $db_delivery_details = $stmt_delivery->fetchAll(PDO::FETCH_ASSOC);
+
+    // Group items and delivery details by order_id and product_id
+    $itemsByOrderId = [];
+    foreach ($db_order_items as $item) {
+        $itemsByOrderId[$item['order_id']][] = $item;
+    }
+    $deliveryByOrderProduct = [];
+    foreach ($db_delivery_details as $detail) {
+        $deliveryByOrderProduct[$detail['order_id']][$detail['product_id']] = $detail;
+    }
+
+    // Build the final $orders array to be used in the view
+    foreach ($db_orders as $db_order) {
+        $order_id = $db_order['id'];
+        $items_list = $itemsByOrderId[$order_id] ?? [];
+        $delivery_details = $deliveryByOrderProduct[$order_id] ?? [];
+        
+        $items_str = implode('<br>', array_map(function($item) {
+            return htmlspecialchars($item['name']) . ' (' . $item['quantity'] . 'x @' . number_format($item['rate_ksh'], 0) . ')';
+        }, $items_list));
+
+        // Build delivery details HTML as a flat unordered list (one bullet per field, no bold labels)
+        $delivery_html = '';
+        if (!empty($items_list)) {
+            foreach ($items_list as $item) {
+                $d = $delivery_details[$item['product_id']] ?? [];
+                $delivery_html .= '<ul class="delivery-details-list flat-list">';
+                $delivery_html .= '<li>Destination: ' . htmlspecialchars($d['destination'] ?? '-') . '</li>';
+                $delivery_html .= '<li>Company: ' . htmlspecialchars($d['company_name'] ?? '-') . '</li>';
+                $delivery_html .= '<li>Address: ' . htmlspecialchars($d['company_address'] ?? '-') . '</li>';
+                $delivery_html .= '<li>Recipient: ' . htmlspecialchars($d['recipient_name'] ?? '-') . '</li>';
+                $delivery_html .= '<li>Phone: ' . htmlspecialchars($d['recipient_phone'] ?? '-') . '</li>';
+                $delivery_html .= '</ul>';
+            }
+        }
+
+        $orders[] = [
+            'id' => $order_id,
+            'total_ksh' => $db_order['total_ksh'],
+            'company_name' => htmlspecialchars($db_order['company_name']),
+            'user_email' => htmlspecialchars($db_order['user_email']),
+            'created_at' => $db_order['created_at'],
+            'delivery_html' => $delivery_html,
+            'items' => $items_str ?: 'No items found for this order.'
+        ];
+    }
+}
+
+$pageTitle = 'Company Orders - XOBO MART';
 include '../includes/header.php';
 ?>
 
-<!-- XOBO-MART STYLE ORDERS HEADER -->
-<section class="orders-header">
-    <h1>My Orders</h1>
-    <p class="orders-description">Track and manage your order history</p>
-</section>
-
-<?php if ($success): ?>
-    <div class="alert alert-success">
-        <i class="fas fa-check-circle"></i>
-        <?php echo htmlspecialchars($success); ?>
+<div class="container">
+    <div class="company-header">
+        <h1>Company Orders</h1>
+        <p>All orders placed by users in your company.</p>
     </div>
-<?php endif; ?>
 
-<!-- XOBO-MART STYLE ORDERS SECTION -->
-<section class="orders-section">
-    <?php if (empty($orders)): ?>
-        <div class="no-orders">
-            <div class="no-orders-content">
-                <div class="no-orders-icon">📦</div>
-                <h3>No orders yet</h3>
-                <p>You haven't placed any orders yet. Start shopping to see your orders here!</p>
-                <a href="../index.php" class="btn">Start Shopping</a>
-            </div>
-        </div>
-    <?php else: ?>
-        <!-- Order Stats -->
-        <div class="order-stats">
-            <div class="stat-card">
-                <div class="stat-icon">📦</div>
-                <div class="stat-info">
-                    <span class="stat-number"><?php echo count($orders); ?></span>
-                    <span class="stat-label">Total Orders</span>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">💰</div>
-                <div class="stat-info">
-                    <span class="stat-number">KSh <?php echo number_format(array_sum(array_column($orders, 'total_ksh')), 0); ?></span>
-                    <span class="stat-label">Total Spent</span>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">🚚</div>
-                <div class="stat-info">
-                    <span class="stat-number"><?php echo count(array_filter($orders, function($o) { return $o['status'] === 'delivered'; })); ?></span>
-                    <span class="stat-label">Delivered</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Orders List -->
-        <div class="orders-list">
-            <?php foreach ($orders as $order): ?>
-            <div class="order-card">
-                <div class="order-header">
-                    <div class="order-main-info">
-                        <div class="order-id-section">
-                            <h3>Order #<?php echo str_pad($order['id'], 6, '0', STR_PAD_LEFT); ?></h3>
-                            <span class="tracking-number">
-                                <i class="fas fa-truck"></i>
-                                Tracking: <?php echo $order['tracking_number']; ?>
-                            </span>
-                        </div>
-                        <div class="order-date">
-                            <i class="fas fa-calendar"></i>
-                            <?php echo date('M j, Y at H:i', strtotime($order['created_at'])); ?>
-                        </div>
-                    </div>
-                    <div class="order-status-section">
-                        <div class="order-total">
-                            KSh <?php echo number_format($order['total_ksh'], 2); ?>
-                        </div>
-                        <span class="status-badge status-<?php echo $order['status']; ?>">
-                            <?php 
-                            $statusIcons = [
-                                'pending' => '⏳',
-                                'processing' => '⚙️',
-                                'shipped' => '🚚',
-                                'delivered' => '✅'
-                            ];
-                            echo $statusIcons[$order['status']] . ' ' . ucfirst($order['status']);
-                            ?>
-                        </span>
-                    </div>
-                </div>
-                
-                <div class="order-body">
-                    <div class="order-details-grid">
-                        <div class="order-company">
-                            <label>Seller</label>
-                            <span><?php echo htmlspecialchars($order['company_name']); ?></span>
-                        </div>
-                        
-                        <div class="order-items">
-                            <label>Items</label>
-                            <span><?php echo htmlspecialchars($order['items']); ?></span>
-                        </div>
-                        
-                        <div class="order-address">
-                            <label>Delivery Address</label>
-                            <div class="address-text">
-                                <?php echo nl2br(htmlspecialchars($order['address'])); ?>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="order-actions">
-                        <?php if ($order['status'] !== 'delivered'): ?>
-                            <button class="btn-track">
-                                <i class="fas fa-map-marker-alt"></i>
-                                Track Order
-                            </button>
-                        <?php endif; ?>
-                        
-                        <?php if ($order['status'] === 'delivered'): ?>
-                            <button class="btn-review">
-                                <i class="fas fa-star"></i>
-                                Write Review
-                            </button>
-                        <?php endif; ?>
-                        
-                        <button class="btn-details">
-                            <i class="fas fa-eye"></i>
-                            View Details
-                        </button>
-                        
-                        <?php if (in_array($order['status'], ['pending', 'processing'])): ?>
-                            <button class="btn-cancel">
-                                <i class="fas fa-times"></i>
-                                Cancel Order
-                            </button>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
+    <?php if ($success): ?>
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle"></i>
+            <?php echo htmlspecialchars($success); ?>
         </div>
     <?php endif; ?>
-</section>
 
-<script>
-// Order management functionality
-document.addEventListener('DOMContentLoaded', function() {
-    // Track order functionality
-    document.querySelectorAll('.btn-track').forEach(btn => {
-        btn.addEventListener('click', function() {
-            // In a real application, this would open a tracking modal or page
-            alert('Tracking functionality will be implemented here');
-        });
-    });
-    
-    // Review functionality
-    document.querySelectorAll('.btn-review').forEach(btn => {
-        btn.addEventListener('click', function() {
-            // In a real application, this would open a review modal
-            alert('Review functionality will be implemented here');
-        });
-    });
-    
-    // View details functionality
-    document.querySelectorAll('.btn-details').forEach(btn => {
-        btn.addEventListener('click', function() {
-            // In a real application, this would open order details modal
-            alert('Order details functionality will be implemented here');
-        });
-    });
-    
-    // Cancel order functionality
-    document.querySelectorAll('.btn-cancel').forEach(btn => {
-        btn.addEventListener('click', function() {
-            if (confirm('Are you sure you want to cancel this order?')) {
-                alert('Order cancellation functionality will be implemented here');
-            }
-        });
-    });
-});
-</script>
+    <div class="catalog-section">
+        <div id="table-scrollbar-top" class="table-scrollbar-top"></div>
+        <div class="catalog-table-container" id="table-scrollbar-bottom">
+            <?php if (empty($orders)): ?>
+                <div class="empty-catalog">
+                    <i class="fas fa-box-open"></i>
+                    <h4>No orders found</h4>
+                    <p>No orders have been placed by your company yet.</p>
+                    <a href="/xobo-vision/index.php" class="btn btn-primary">
+                        <i class="fas fa-shopping-cart"></i> Start Shopping
+                    </a>
+                </div>
+            <?php else: ?>
+                <table class="catalog-table">
+                    <thead>
+                        <tr>
+                            <th class="order-id-col">Order ID</th>
+                            <th class="date-col">Date</th>
+                            <th class="email-col">Ordered By</th>
+                            <th class="items-col">Items</th>
+                            <th class="total-col">Total (KSH)</th>
+                            <th class="address-col">Delivery Address</th>
+                            <th class="receipt-col">Receipt</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($orders as $order): ?>
+                            <tr>
+                                <td class="order-id-col">#<?php echo str_pad($order['id'], 6, '0', STR_PAD_LEFT); ?></td>
+                                <td class="date-col"><?php echo date('M j, Y H:i', strtotime($order['created_at'])); ?></td>
+                                <td class="email-col"><?php echo $order['user_email']; ?></td>
+                                <td class="items-col">
+                                    <div class="items-list">
+                                        <?php echo $order['items']; ?>
+                                    </div>
+                                </td>
+                                <td class="total-col"><?php echo number_format($order['total_ksh'], 2); ?></td>
+                                <td class="address-col">
+                                    <div class="address-text">
+                                        <?php echo $order['delivery_html']; ?>
+                                    </div>
+                                </td>
+                                <td class="receipt-col">
+                                    <a href="/xobo-vision/shop/order-receipt.php?order_id=<?php echo $order['id']; ?>" class="btn-receipt-long-narrow">
+                                        <i class="fas fa-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 
 <style>
-/* XOBO-MART STYLE ORDERS STYLING */
-.orders-header {
-    text-align: center;
-    margin: 2rem 0;
-    padding: 2rem;
-    background: var(--xobo-white);
-    border-radius: 8px;
-    box-shadow: 0 2px 5px var(--xobo-shadow);
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 2rem;
 }
-
-.orders-header h1 {
-    color: var(--xobo-primary);
-    font-size: 2rem;
-    margin-bottom: 0.5rem;
+.company-header {
+    background: linear-gradient(135deg, var(--xobo-primary) 0%, var(--xobo-primary-hover) 100%);
+    color: white;
+    padding: 2.5rem 0;
+    text-align: center;
+    margin-bottom: 2rem;
+    border-radius: 8px;
+}
+.company-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
     font-weight: 600;
 }
-
-.orders-description {
-    color: var(--xobo-gray);
-    font-size: 1rem;
+.company-header p {
+    font-size: 1.1rem;
+    opacity: 0.9;
     margin: 0;
 }
-
-.alert {
-    padding: 1rem 1.5rem;
+.catalog-section {
+    background: white;
     border-radius: 8px;
-    margin: 1rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.alert-success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
-}
-
-.no-orders {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 50vh;
-    background: var(--xobo-white);
-    border-radius: 8px;
-    box-shadow: 0 2px 5px var(--xobo-shadow);
-}
-
-.no-orders-content {
-    text-align: center;
-    padding: 3rem;
-}
-
-.no-orders-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-    opacity: 0.5;
-    color: var(--xobo-gray);
-}
-
-.no-orders-content h3 {
-    color: var(--xobo-primary);
-    margin-bottom: 1rem;
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
-.no-orders-content p {
-    color: var(--xobo-gray);
+    box-shadow: 0 2px 10px var(--xobo-shadow);
     margin-bottom: 2rem;
+    overflow-x: auto;
+    padding: 0;
 }
-
-.order-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin: 2rem 0;
+.catalog-table-scroll-top {
+    overflow-x: auto;
+    direction: rtl;
+    width: 100%;
+    margin-bottom: -16px; /* visually hide bottom scrollbar if needed */
+    padding-bottom: 0;
 }
-
-.stat-card {
-    background: var(--xobo-white);
-    padding: 1.5rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px var(--xobo-shadow);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    transition: transform 0.3s;
+.catalog-table-container {
+    overflow-x: auto;
+    direction: ltr;
+    width: 100%;
+    padding: 0;
+    margin: 0;
 }
-
-.stat-card:hover {
-    transform: translateY(-2px);
+.catalog-table {
+    width: 100%;
+    min-width: 1400px;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 0.5rem 0;
+    table-layout: auto;
 }
-
-.stat-icon {
-    font-size: 2rem;
-    background: var(--xobo-light-gray);
-    padding: 1rem;
-    border-radius: 50%;
-}
-
-.stat-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-number {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--xobo-primary);
-    line-height: 1.2;
-}
-
-.stat-label {
-    font-size: 0.8rem;
-    color: var(--xobo-gray);
-}
-
-.orders-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    margin: 2rem 0;
-}
-
-.order-card {
-    background: var(--xobo-white);
-    border-radius: 8px;
-    box-shadow: 0 2px 5px var(--xobo-shadow);
-    overflow: hidden;
-    transition: all 0.3s;
-}
-
-.order-card:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-}
-
-.order-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem;
-    background: var(--xobo-light-gray);
+.catalog-table th, .catalog-table td {
+    padding: 1.25rem 1rem;
+    text-align: left;
     border-bottom: 1px solid var(--xobo-border);
+    vertical-align: top;
+    line-height: 1.5;
+    background: #fff;
+    word-break: break-word;
 }
-
-.order-main-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.order-id-section h3 {
-    color: var(--xobo-primary);
-    font-size: 1.1rem;
+.catalog-table th {
+    background: #f8f9fa;
     font-weight: 600;
-    margin: 0 0 0.25rem 0;
-}
-
-.tracking-number {
-    font-size: 0.8rem;
-    color: var(--xobo-gray);
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-}
-
-.order-date {
-    font-size: 0.8rem;
-    color: var(--xobo-gray);
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
-}
-
-.order-status-section {
-    text-align: right;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    align-items: flex-end;
-}
-
-.order-total {
-    font-size: 1.2rem;
-    font-weight: 700;
     color: var(--xobo-primary);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 2px solid var(--xobo-primary);
 }
+.catalog-table tbody tr:hover {
+    background: #f8f9fa;
+}
+.order-id-col { min-width: 100px; font-family: monospace; font-size: 0.9rem; }
+.date-col { min-width: 150px; white-space: nowrap; }
+.email-col { min-width: 200px; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.items-col { min-width: 300px; }
+.items-list { line-height: 1.6; }
+.total-col { min-width: 120px; font-weight: 600; text-align: right; }
+.address-col { min-width: 400px; }
+.receipt-col { min-width: 120px; text-align: center; padding-right: 2rem; }
+.address-text { white-space: normal; line-height: 1.4; }
 
-.status-badge {
-    padding: 0.4rem 0.8rem;
-    border-radius: 20px;
-    font-size: 0.8rem;
+/* Mini delivery table improvements */
+.mini-delivery-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.98em;
+    margin-bottom: 0.5em;
+    background: #f6f8fa;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(22,35,77,0.04);
+}
+.mini-delivery-table th, .mini-delivery-table td {
+    border: 1px solid #e0e0e0;
+    padding: 0.5em 0.7em;
+    text-align: left;
+    background: #fff;
+    font-size: 0.97em;
+}
+.mini-delivery-table th {
+    background: #e9eef6;
+    color: var(--xobo-primary);
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    text-align: left;
+}
+.mini-delivery-table tr:nth-child(even) td {
+    background: #f6f8fa;
+}
+.mini-delivery-table td {
+    max-width: 200px;
+    white-space: pre-line;
+    word-break: break-word;
+}
+@media (max-width: 1500px) {
+    .container { max-width: 98vw; }
+    .catalog-table { min-width: 1200px; }
+}
+@media (max-width: 1200px) {
+    .container { max-width: 100vw; padding: 0 1rem; }
+    .catalog-table { min-width: 900px; }
+}
+@media (max-width: 900px) {
+    .catalog-table { min-width: 600px; }
+}
+@media (max-width: 768px) {
+    .catalog-table { min-width: 500px; }
 }
 
-.status-pending {
-    background: #fff3cd;
-    color: #856404;
+/* Delivery details as list */
+.delivery-details-list {
+    list-style: disc inside;
+    margin: 0;
+    padding-left: 1.2em;
 }
-
-.status-processing {
-    background: #cce5ff;
-    color: #004085;
+.delivery-details-list li {
+    margin-bottom: 1em;
+    background: #f6f8fa;
+    border-radius: 6px;
+    padding: 0.7em 1em;
+    box-shadow: 0 1px 4px rgba(22,35,77,0.04);
 }
-
-.status-shipped {
-    background: #e1ecf4;
-    color: #0c5460;
+.delivery-detail {
+    display: inline-block;
+    margin-bottom: 0.1em;
+    font-size: 0.97em;
 }
-
-.status-delivered {
-    background: #d4edda;
-    color: #155724;
+.delivery-details-list.flat-list {
+    list-style: disc inside;
+    margin: 0 0 1em 0;
+    padding-left: 1.2em;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
 }
-
-.order-body {
-    padding: 1.5rem;
+.delivery-details-list.flat-list li {
+    margin-bottom: 0.2em;
+    background: none;
+    padding: 0;
+    font-size: 1em;
 }
-
-.order-details-grid {
-    display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    gap: 1.5rem;
-    margin-bottom: 1.5rem;
+/* Hide the bottom scrollbar for the container */
+.catalog-table-container::-webkit-scrollbar {
+    display: none;
 }
-
-.order-details-grid > div {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
+.catalog-table-container {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
-
-.order-details-grid label {
-    font-size: 0.8rem;
-    color: var(--xobo-gray);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.table-scrollbar-top {
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 16px;
+    width: 100%;
+    margin-bottom: 0;
 }
-
-.order-details-grid span {
-    color: var(--xobo-primary);
-    font-weight: 500;
-    font-size: 0.9rem;
+.table-scrollbar-top::-webkit-scrollbar {
+    height: 16px;
 }
-
-.address-text {
-    color: var(--xobo-primary);
-    font-weight: 500;
-    font-size: 0.9rem;
-    line-height: 1.4;
+.table-scrollbar-top::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 8px;
 }
-
-.order-actions {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    border-top: 1px solid var(--xobo-border);
-    padding-top: 1rem;
+.catalog-table-container {
+    overflow-x: auto;
+    padding: 0;
+    margin: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 }
-
-.order-actions button {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
+.catalog-table-container::-webkit-scrollbar {
+    display: none;
+}
+.btn-receipt {
+    display: inline-flex;
     align-items: center;
     gap: 0.4rem;
+    padding: 0.5rem 1.2rem;
+    background: #2563eb;
+    color: #fff !important;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 6px rgba(37,99,235,0.08);
+    border: none;
 }
-
-.btn-track {
+.btn-receipt:hover {
+    background: #1d4ed8;
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.15);
+    transform: translateY(-1px) scale(1.03);
+}
+.btn-receipt-long-narrow {
+    min-width: 70px;
+    height: 36px;
+    padding: 0.25rem 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: var(--xobo-primary);
-    color: white;
+    color: #fff;
+    border: none;
+    transition: background 0.2s;
+    text-decoration: none !important;
+    gap: 0.5rem;
 }
-
-.btn-track:hover {
+.btn-receipt-long-narrow:hover {
     background: var(--xobo-primary-hover);
-}
-
-.btn-review {
-    background: #f39c12;
-    color: white;
-}
-
-.btn-review:hover {
-    background: #e67e22;
-}
-
-.btn-details {
-    background: var(--xobo-gray);
-    color: white;
-}
-
-.btn-details:hover {
-    background: #555;
-}
-
-.btn-cancel {
-    background: var(--xobo-accent);
-    color: white;
-}
-
-.btn-cancel:hover {
-    background: #c0392b;
-}
-
-/* Responsive Design */
-@media (max-width: 992px) {
-    .order-details-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-    }
-    
-    .order-header {
-        flex-direction: column;
-        gap: 1rem;
-        text-align: center;
-    }
-    
-    .order-status-section {
-        align-items: center;
-    }
-}
-
-@media (max-width: 768px) {
-    .orders-header {
-        padding: 1rem;
-    }
-    
-    .orders-header h1 {
-        font-size: 1.5rem;
-    }
-    
-    .order-stats {
-        grid-template-columns: 1fr;
-    }
-    
-    .stat-card {
-        padding: 1rem;
-    }
-    
-    .order-card {
-        margin: 0 -1rem;
-        border-radius: 0;
-    }
-    
-    .order-actions {
-        flex-direction: column;
-    }
-    
-    .order-actions button {
-        justify-content: center;
-    }
-}
-
-@media (max-width: 480px) {
-    .order-header {
-        padding: 1rem;
-    }
-    
-    .order-body {
-        padding: 1rem;
-    }
+    color: #fff;
 }
 </style>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Create a fake inner div to match the table width
+    var table = document.querySelector('.catalog-table');
+    var topScrollbar = document.getElementById('table-scrollbar-top');
+    var bottomContainer = document.getElementById('table-scrollbar-bottom');
+    if (table && topScrollbar && bottomContainer) {
+        var fakeDiv = document.createElement('div');
+        fakeDiv.style.width = table.scrollWidth + 'px';
+        fakeDiv.style.height = '1px';
+        topScrollbar.appendChild(fakeDiv);
+
+        // Sync scroll positions
+        topScrollbar.onscroll = function() {
+            bottomContainer.scrollLeft = topScrollbar.scrollLeft;
+        };
+        bottomContainer.onscroll = function() {
+            topScrollbar.scrollLeft = bottomContainer.scrollLeft;
+        };
+    }
+});
+</script>
 
 <?php include '../includes/footer.php'; ?> 

@@ -23,6 +23,28 @@ require_once __DIR__ . '/../config/db.php';
                     <img src="/xobo-vision/assets/images/xobo-logo.png" alt="XOBO MART" class="logo">
                 </a>
             </div>
+            
+            <div class="nav-right">
+                <?php if (isLoggedIn()): ?>
+                    <div class="user-menu" id="user-menu">
+                        <button class="user-dropdown-toggle">
+                            <i class="fas fa-user-circle user-avatar"></i>
+                            <span class="user-email"><?php echo htmlspecialchars($_SESSION['email']); ?></span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="user-dropdown-menu" id="user-dropdown-menu">
+                            <div class="dropdown-header">
+                                <strong><?php echo htmlspecialchars($_SESSION['email']); ?></strong>
+                                <small><?php echo htmlspecialchars($_SESSION['role']); ?></small>
+                            </div>
+                            <div class="dropdown-divider"></div>
+                            <a href="/xobo-vision/auth/logout.php" class="dropdown-item logout-link">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </a>
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
     </nav>
 
@@ -177,7 +199,7 @@ console.log('User ID: <?php echo isset($_SESSION['user_id']) ? $_SESSION['user_i
 /* SIMPLIFIED NAVIGATION - LOGO POSITIONED LEFT */
 .header .container {
     display: flex;
-    justify-content: flex-start;
+    justify-content: space-between;
     align-items: center;
     height: 80px;
     padding: 0 2rem;
@@ -185,6 +207,139 @@ console.log('User ID: <?php echo isset($_SESSION['user_id']) ? $_SESSION['user_i
 
 .nav-brand {
     flex-shrink: 0;
+}
+
+/* User Menu Styles */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.user-menu {
+    position: relative;
+}
+
+.user-dropdown-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.3s;
+}
+
+.user-dropdown-toggle:hover {
+    background-color: var(--xobo-light-gray);
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: none;
+    font-size: 2rem;
+    color: var(--xobo-primary);
+    background: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.user-email {
+    font-weight: 500;
+    color: var(--xobo-primary);
+}
+
+.user-dropdown-toggle .fa-chevron-down {
+    color: var(--xobo-gray);
+    font-size: 0.8rem;
+    transition: transform 0.3s;
+}
+
+.user-dropdown-toggle.expanded .fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.user-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--xobo-shadow);
+    border: 1px solid var(--xobo-border);
+    min-width: 220px;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(10px);
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.user-dropdown-menu.show {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+}
+
+.dropdown-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--xobo-border);
+}
+
+.dropdown-header strong {
+    display: block;
+    color: var(--xobo-primary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dropdown-header small {
+    color: var(--xobo-gray);
+    font-size: 0.8rem;
+    text-transform: capitalize;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+}
+
+.dropdown-item i {
+    color: var(--xobo-gray);
+    width: 16px;
+    text-align: center;
+}
+
+.dropdown-item:hover {
+    background-color: var(--xobo-light-gray);
+}
+
+.logout-link {
+    color: var(--xobo-accent);
+}
+
+.logout-link i {
+    color: var(--xobo-accent);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: var(--xobo-border);
+    margin: 0.5rem 0;
 }
 
 /* Logo styling for simplified navigation */

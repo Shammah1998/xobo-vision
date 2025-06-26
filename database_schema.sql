@@ -99,6 +99,15 @@ CREATE TABLE order_delivery_details (
   UNIQUE KEY unique_order_product (order_id, product_id)
 );
 
+-- Drivers assigned to orders
+CREATE TABLE drivers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  driver_name VARCHAR(255) NOT NULL,
+  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id)
+);
+
 -- Insert default super admin user
 INSERT INTO users (email, password, role) VALUES 
 ('admin@xobo.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin');
