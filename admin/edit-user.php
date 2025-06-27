@@ -99,6 +99,17 @@ if ($userId > 0) {
 // Otherwise, show user management dashboard
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $users = fetchAllUsers($pdo, $search);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user_id'])) {
+    $userId = (int)$_POST['delete_user_id'];
+    try {
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $message = "User deleted successfully. All orders remain in the database.";
+    } catch (PDOException $e) {
+        $error = "Error deleting user: " . $e->getMessage();
+    }
+}
 ?>
 <div class="admin-card" style="margin: 2rem 0 0 0; width: 100%; box-sizing: border-box;">
     <h2 style="color: var(--xobo-primary); margin-bottom: 1.5rem;">User Management</h2>
@@ -138,6 +149,12 @@ $users = fetchAllUsers($pdo, $search);
                     <a href="edit-user.php?id=<?php echo $user['id']; ?>" class="btn btn-primary btn-sm" title="Edit User" style="padding: 0.4rem 0.7rem; min-width: 32px; display: inline-flex; align-items: center; justify-content: center;">
                         <i class="fas fa-pen"></i>
                     </a>
+                    <form method="POST" style="display:inline-block; margin:0;" onsubmit="return confirm('Delete this user? This will not delete their orders.');">
+                        <input type="hidden" name="delete_user_id" value="<?php echo $user['id']; ?>">
+                        <button type="submit" class="btn btn-danger btn-sm" title="Delete User" style="padding: 0.4rem 0.7rem; min-width: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
                 </td>
             </tr>
         <?php endforeach; ?>

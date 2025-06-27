@@ -305,10 +305,10 @@ if (!isAdmin($pdo)) {
                 <div class="nav-section">
                     <div class="nav-section-title">Admin Management</div>
                     <a href="/xobo-vision/admin/admin-users.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'admin-users.php' ? 'active' : ''; ?>">
-                        <i class="fas fa-user-shield"></i> Admin Users
+                        <i class="fas fa-users-cog"></i>Admin Users
                     </a>
-                    <a href="/xobo-vision/admin/edit-admin.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'edit-admin.php' ? 'active' : ''; ?>">
-                        <i class="fas fa-user-edit"></i> Edit Admin
+                    <a href="/xobo-vision/admin/add-admin.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'add-admin.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-user-plus"></i>Add Sub-Admin
                     </a>
                 </div>
 

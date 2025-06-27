@@ -877,8 +877,6 @@ $pageTitle = 'Receipt #' . $orderId;
                         <th>SKU</th>
                         <th style="text-align: center;">Qty</th>
                         <th style="text-align: right;">Weight (kg)</th>
-                        <th style="text-align: right;">Unit Price</th>
-                        <th style="text-align: right;">Total</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -890,10 +888,8 @@ $pageTitle = 'Receipt #' . $orderId;
                         <td>
                             <span class="product-sku"><?php echo htmlspecialchars($item['sku']); ?></span>
                         </td>
-                        <td class="quantity"><?php echo $item['quantity']; ?></td>
-                        <td class="weight"><?php echo number_format($item['weight_kg'] * $item['quantity'], 2); ?></td>
-                        <td class="price"><?php echo formatCurrency($item['rate_ksh']); ?></td>
-                        <td class="total"><?php echo formatCurrency($item['line_total']); ?></td>
+                        <td class="quantity" style="text-align:center;"><?php echo $item['quantity']; ?></td>
+                        <td class="weight" style="text-align:right;"><?php echo number_format($item['weight_kg'] * $item['quantity'], 2); ?></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -952,22 +948,6 @@ $pageTitle = 'Receipt #' . $orderId;
                     <tr>
                         <td class="totals-label">Total Weight:</td>
                         <td class="totals-value"><?php echo number_format($totalWeight, 2); ?> kg</td>
-                    </tr>
-                    <tr>
-                        <td class="totals-label">Subtotal:</td>
-                        <td class="totals-value"><?php echo formatCurrency($order['total_ksh']); ?></td>
-                    </tr>
-                    <tr>
-                        <td class="totals-label">Delivery:</td>
-                        <td class="totals-value">As specified</td>
-                    </tr>
-                    <tr>
-                        <td class="totals-label">Taxes:</td>
-                        <td class="totals-value">Included</td>
-                    </tr>
-                    <tr class="grand-total-row">
-                        <td class="totals-label">Grand Total:</td>
-                        <td class="totals-value"><?php echo formatCurrency($order['total_ksh']); ?></td>
                     </tr>
                 </tbody>
             </table>

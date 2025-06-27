@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_admin_id'])) {
 
 $adminId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($adminId > 0) {
-    $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ? AND role = "super_admin" AND id != 1');
+    $stmt = $pdo->prepare('SELECT * FROM users WHERE id = ? AND role IN ("super_admin", "admin")');
     $stmt->execute([$adminId]);
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$admin) {
@@ -75,15 +75,16 @@ if ($adminId > 0) {
             <div class="form-group">
                 <label for="role" style="font-weight: 600; color: var(--xobo-primary);">Role</label>
                 <select name="role" id="role" required style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px;">
-                    <option value="super_admin" selected>Super Admin</option>
+                    <option value="super_admin" <?php if ($admin['role'] === 'super_admin') echo 'selected'; ?>>Super Admin</option>
+                    <option value="admin" <?php if ($admin['role'] === 'admin') echo 'selected'; ?>>Admin</option>
                 </select>
             </div>
             <div class="form-group">
-                <label for="password" style="font-weight: 600; color: var(--xobo-primary);">Password <span style="font-weight:400; color:#888;">(leave blank to keep unchanged)</span></label>
+                <label for="password" style="font-weight: 600; color:#888;">Password <span style="font-weight:400; color:#888;">(leave blank to keep unchanged)</span></label>
                 <input type="password" name="password" id="password" placeholder="New password (optional)" style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px;">
             </div>
             <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-                <a href="edit-admin.php" class="btn btn-secondary">Back</a>
+                <a href="admin-users.php" class="btn btn-secondary">Back</a>
                 <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>
         </form>
