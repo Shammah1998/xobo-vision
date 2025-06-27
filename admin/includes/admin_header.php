@@ -297,6 +297,9 @@ if (!isAdmin($pdo)) {
                     <a href="/xobo-vision/admin/invite-user.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'invite-user.php' ? 'active' : ''; ?>">
                         <i class="fas fa-user-plus"></i> Invite User
                     </a>
+                    <a href="/xobo-vision/admin/edit-user.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'edit-user.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-user-edit"></i> Edit User
+                    </a>
                 </div>
 
                 <div class="nav-section">
@@ -304,8 +307,8 @@ if (!isAdmin($pdo)) {
                     <a href="/xobo-vision/admin/admin-users.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'admin-users.php' ? 'active' : ''; ?>">
                         <i class="fas fa-user-shield"></i> Admin Users
                     </a>
-                    <a href="/xobo-vision/admin/invite-admin.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'invite-admin.php' ? 'active' : ''; ?>">
-                        <i class="fas fa-user-plus"></i> Invite Admin
+                    <a href="/xobo-vision/admin/edit-admin.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'edit-admin.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-user-edit"></i> Edit Admin
                     </a>
                 </div>
 

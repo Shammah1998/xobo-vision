@@ -3,24 +3,35 @@ session_start();
 require_once '../config/db.php';
 require_once '../includes/functions.php';
 
-requireRole(['user']);
+requireRole(['user', 'super_admin', 'company_admin']);
 
 $orderId = isset($_GET['order_id']) ? (int)$_GET['order_id'] : 0;
 $userId = $_SESSION['user_id'];
 $companyId = $_SESSION['company_id'];
+$role = $_SESSION['role'] ?? '';
 
+global $pdo;
 if (!$orderId) {
     header('Location: ../index.php');
     exit;
 }
 
-// Get order details
-$stmt = $pdo->prepare("SELECT o.*, c.name as company_name, u.email as user_email 
-                       FROM orders o 
-                       JOIN companies c ON o.company_id = c.id 
-                       JOIN users u ON o.user_id = u.id 
-                       WHERE o.id = ? AND o.user_id = ? AND o.company_id = ?");
-$stmt->execute([$orderId, $userId, $companyId]);
+// If admin, fetch by order_id only. If not, restrict by user_id and company_id.
+if (isAdmin($pdo) || $role === 'company_admin') {
+    $stmt = $pdo->prepare("SELECT o.*, c.name as company_name, u.email as user_email 
+                           FROM orders o 
+                           JOIN companies c ON o.company_id = c.id 
+                           JOIN users u ON o.user_id = u.id 
+                           WHERE o.id = ?");
+    $stmt->execute([$orderId]);
+} else {
+    $stmt = $pdo->prepare("SELECT o.*, c.name as company_name, u.email as user_email 
+                           FROM orders o 
+                           JOIN companies c ON o.company_id = c.id 
+                           JOIN users u ON o.user_id = u.id 
+                           WHERE o.id = ? AND o.user_id = ? AND o.company_id = ?");
+    $stmt->execute([$orderId, $userId, $companyId]);
+}
 $order = $stmt->fetch();
 
 if (!$order) {

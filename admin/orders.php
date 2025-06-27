@@ -22,15 +22,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_driver_order_i
 include 'includes/admin_header.php';
 require_once '../config/db.php';
 
+// Handle search filters
+$orderIdSearch = isset($_GET['order_id']) ? trim($_GET['order_id']) : '';
+$fromDate = isset($_GET['from_date']) ? trim($_GET['from_date']) : '';
+$toDate = isset($_GET['to_date']) ? trim($_GET['to_date']) : '';
+
+// Build query with filters
+$where = [];
+$params = [];
+if ($orderIdSearch !== '') {
+    $where[] = 'o.id LIKE ?';
+    $params[] = "%$orderIdSearch%";
+}
+if ($fromDate && $toDate) {
+    $where[] = 'DATE(o.created_at) BETWEEN ? AND ?';
+    $params[] = $fromDate;
+    $params[] = $toDate;
+} elseif ($fromDate) {
+    $where[] = 'DATE(o.created_at) >= ?';
+    $params[] = $fromDate;
+} elseif ($toDate) {
+    $where[] = 'DATE(o.created_at) <= ?';
+    $params[] = $toDate;
+}
+$whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
 // Fetch all orders with company and user info
 $stmt = $pdo->prepare('
     SELECT o.id, o.total_ksh, o.created_at, c.name AS company_name, u.email AS user_email, o.address
     FROM orders o
     JOIN companies c ON o.company_id = c.id
     JOIN users u ON o.user_id = u.id
+    ' . $whereClause . '
     ORDER BY o.created_at DESC
 ');
-$stmt->execute();
+$stmt->execute($params);
 $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch all order items for all orders
@@ -68,6 +94,16 @@ if ($orderIds) {
 
 <div class="admin-card">
     <h2 style="margin-bottom: 1rem; color: var(--xobo-primary);">All Orders</h2>
+    <form method="GET" style="display: flex; gap: 1rem; align-items: end; margin-bottom: 1.5rem; flex-wrap: wrap;">
+        <input type="text" name="order_id" value="<?php echo htmlspecialchars($orderIdSearch); ?>" placeholder="Order ID" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 120px;">
+        <input type="date" name="from_date" value="<?php echo htmlspecialchars($fromDate); ?>" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 160px;">
+        <input type="date" name="to_date" value="<?php echo htmlspecialchars($toDate); ?>" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 160px;">
+        <button type="submit" class="btn btn-primary">Search</button>
+        <?php if ($orderIdSearch || $fromDate || $toDate): ?>
+            <a href="orders.php" class="btn btn-secondary">Clear</a>
+        <?php endif; ?>
+        <button type="button" class="btn btn-success" id="download-csv-btn">Download CSV</button>
+    </form>
     <div class="table-container">
         <table class="data-table">
             <thead>
@@ -138,7 +174,12 @@ if ($orderIds) {
                                                     <?php if ($itemIndex === 0): ?>
                                                         <td rowspan="<?php echo count($orderItems[$order['id']]); ?>" style="vertical-align: top; text-align: right; padding: 0.5rem 1.5rem 0.5rem 1.5rem; min-width: 180px;">
                                                             <?php if (!empty($drivers[$order['id']])): ?>
-                                                                <span style="color: var(--xobo-primary); font-weight: 600; font-size: 1.05em; background: #f8f9fa; padding: 0.4em 1em; border-radius: 6px;">Driver: <?php echo htmlspecialchars($drivers[$order['id']]); ?></span>
+                                                                <span style="color: var(--xobo-primary); font-weight: 600; font-size: 1.05em; background: #f8f9fa; padding: 0.4em 1em; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.5em;">
+                                                                    Driver: <?php echo htmlspecialchars($drivers[$order['id']]); ?>
+                                                                    <button class="delete-driver-btn" data-order-id="<?php echo $order['id']; ?>" title="Remove Driver" style="background: none; border: none; color: #dc3545; font-size: 1.1em; margin-left: 0.5em; cursor: pointer; display: inline-flex; align-items: center;">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                </span>
                                                             <?php endif; ?>
                                                         </td>
                                                     <?php endif; ?>
@@ -158,7 +199,7 @@ if ($orderIds) {
                                     <form method="POST" style="display:flex; gap:1rem; align-items:center; margin:0;">
                                         <input type="hidden" name="assign_driver_order_id" value="<?php echo $order['id']; ?>">
                                         <label for="driver_name_<?php echo $order['id']; ?>" style="font-weight:600; color:var(--xobo-primary); margin:0;">Assign Driver:</label>
-                                        <input type="text" id="driver_name_<?php echo $order['id']; ?>" name="driver_name" value="<?php echo htmlspecialchars($drivers[$order['id']] ?? ''); ?>" placeholder="Enter driver name" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; min-width:200px; margin:0;">
+                                        <input type="text" id="driver_name_<?php echo $order['id']; ?>" name="driver_name" value="" placeholder="Enter driver name" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; min-width:200px; margin:0;">
                                         <button type="submit" class="btn btn-primary btn-sm align-btns" style="width: 140px; height: 40px; text-align: center; display: flex; align-items: center; justify-content: center;">
                                             <?php echo isset($drivers[$order['id']]) ? 'Update' : 'Assign'; ?>
                                         </button>
@@ -198,6 +239,38 @@ function toggleOrderDetails(orderId) {
         icon.style.transform = 'rotate(0deg)';
     }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.delete-driver-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (!confirm('Remove the assigned driver for this order?')) return;
+            var orderId = this.getAttribute('data-order-id');
+            var driverSpan = this.closest('span');
+            var driverInput = document.getElementById('driver_name_' + orderId);
+            fetch('delete-driver.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'order_id=' + encodeURIComponent(orderId)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    driverSpan.remove();
+                    if (driverInput) driverInput.value = '';
+                } else {
+                    alert('Failed to remove driver.');
+                }
+            })
+            .catch(() => alert('Failed to remove driver.'));
+        });
+    });
+});
+
+document.getElementById('download-csv-btn').addEventListener('click', function() {
+    const params = new URLSearchParams(window.location.search);
+    window.location.href = 'export-orders.php?' + params.toString();
+});
 </script>
 
 <style>

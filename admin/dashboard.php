@@ -51,6 +51,18 @@ $stmt = $pdo->prepare("
 $stmt->execute();
 $recentCompanies = $stmt->fetchAll();
 
+// Fetch users for all companies in recentCompanies
+$companyIds = array_column($recentCompanies, 'id');
+$usersByCompany = [];
+if ($companyIds) {
+    $placeholders = implode(',', array_fill(0, count($companyIds), '?'));
+    $stmt = $pdo->prepare('SELECT id, company_id, email, role, created_at FROM users WHERE company_id IN (' . $placeholders . ')');
+    $stmt->execute($companyIds);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $user) {
+        $usersByCompany[$user['company_id']][] = $user;
+    }
+}
+
 $pageTitle = 'Dashboard Overview';
 include 'includes/admin_header.php';
 ?>
@@ -93,6 +105,7 @@ include 'includes/admin_header.php';
                     <th>Admin Email</th>
                     <th>Status</th>
                     <th>Registered</th>
+                    <th>Users</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -114,6 +127,18 @@ include 'includes/admin_header.php';
                             </span>
                         </td>
                         <td><?php echo date('M j, Y', strtotime($company['created_at'])); ?></td>
+                        <td style="text-align:center; width: 70px;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+                                <button type="button" class="btn btn-primary btn-sm view-users-btn" onclick="toggleUsersDropdown(<?php echo $company['id']; ?>)" data-company-id="<?php echo $company['id']; ?>" id="view-users-btn-<?php echo $company['id']; ?>" style="min-width: 60px; display: flex; align-items: center; justify-content: center; gap: 0.4em;">
+                                    View
+                                    <i class="fas fa-chevron-down" id="chevron-icon-<?php echo $company['id']; ?>" style="transition: transform 0.2s;"></i>
+                                </button>
+                                <a href="company-products.php?company_id=<?php echo $company['id']; ?>" class="btn btn-secondary btn-sm" style="min-width: 60px; display: flex; align-items: center; justify-content: center; gap: 0.4em;">
+                                    Products
+                                    <i class="fas fa-box-open"></i>
+                                </a>
+                            </div>
+                        </td>
                         <td style="padding: 0; height: 100%; width: 80px; text-align: center;">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%; min-height: 40px; width: 100%;">
                                 <form method="POST" style="display:inline-block; margin:0;" onsubmit="return confirmDeleteDashboard('<?php echo htmlspecialchars($company['name'], ENT_QUOTES); ?>')">
@@ -136,6 +161,41 @@ include 'includes/admin_header.php';
                             </div>
                         </td>
                     </tr>
+                    <tr class="users-dropdown-row" id="users-dropdown-<?php echo $company['id']; ?>" style="display:none; background:#f8f9fa;">
+                        <td colspan="6" style="padding:1.5rem 2rem;">
+                            <h4 style="color:var(--xobo-primary); margin-bottom:0.75rem;">Users for <?php echo htmlspecialchars($company['name']); ?></h4>
+                            <?php if (!empty($usersByCompany[$company['id']])): ?>
+                                <table style="width:100%; border-collapse:collapse; margin-bottom:1rem;">
+                                    <thead>
+                                        <tr style="background:#f0f0f0;">
+                                            <th style="padding:0.5rem; text-align:left;">User ID</th>
+                                            <th style="padding:0.5rem; text-align:left;">Email</th>
+                                            <th style="padding:0.5rem; text-align:left;">Role</th>
+                                            <th style="padding:0.5rem; text-align:left;">Created</th>
+                                            <th style="padding:0.5rem; text-align:center;">Edit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($usersByCompany[$company['id']] as $user): ?>
+                                            <tr>
+                                                <td style="padding:0.5rem;">#<?php echo htmlspecialchars($user['id']); ?></td>
+                                                <td style="padding:0.5rem;"><?php echo htmlspecialchars($user['email']); ?></td>
+                                                <td style="padding:0.5rem; text-transform:capitalize;"><?php echo htmlspecialchars($user['role']); ?></td>
+                                                <td style="padding:0.5rem;"><?php echo date('M d, Y', strtotime($user['created_at'])); ?></td>
+                                                <td style="padding:0.5rem; text-align:center;">
+                                                    <a href="edit-user.php?id=<?php echo $user['id']; ?>" class="btn btn-primary btn-sm" title="Edit User" style="padding: 0.4rem 0.7rem; min-width: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-pen"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php else: ?>
+                                <div style="color:var(--xobo-gray);">No users found for this company.</div>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>
             </tbody>
@@ -154,6 +214,18 @@ include 'includes/admin_header.php';
 <script>
 function confirmDeleteDashboard(companyName) {
     return confirm('Are you sure you want to delete "' + companyName + '"? This will delete the company and all its users and products. This action CANNOT be undone!');
+}
+
+function toggleUsersDropdown(companyId) {
+    const row = document.getElementById('users-dropdown-' + companyId);
+    const icon = document.getElementById('chevron-icon-' + companyId);
+    if (row.style.display === 'none' || row.style.display === '') {
+        row.style.display = 'table-row';
+        if (icon) icon.style.transform = 'rotate(180deg)';
+    } else {
+        row.style.display = 'none';
+        if (icon) icon.style.transform = 'rotate(0deg)';
+    }
 }
 </script>
 
