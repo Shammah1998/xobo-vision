@@ -953,6 +953,45 @@ $pageTitle = 'Receipt #' . $orderId;
             </table>
         </div>
 
+        <!-- Receiver and Driver Signature Section -->
+        <div class="table-section" style="padding-top: 1.5rem; padding-bottom: 2.5rem;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 2rem;">
+                <!-- Receiver Side -->
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-weight: 600; color: var(--xobo-primary); margin-bottom: 1rem; font-size: 1.1rem;">Receiver</div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Name:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                    </div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Date:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 120px; width: 60%; height: 2.2em;"></div>
+                    </div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Signature:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                    </div>
+                </div>
+                <!-- Vertical Divider -->
+                <div style="width: 2px; background: #e0e0e0; height: 140px; align-self: center;"></div>
+                <!-- Driver Side -->
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div style="font-weight: 600; color: var(--xobo-primary); margin-bottom: 1rem; font-size: 1.1rem;">Driver</div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Name:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                    </div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Date:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 120px; width: 60%; height: 2.2em;"></div>
+                    </div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Signature:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
 
