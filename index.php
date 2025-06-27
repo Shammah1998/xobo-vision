@@ -119,29 +119,36 @@ include 'includes/header.php';
 }
 
 .quick-actions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    display: flex;
     gap: 1rem;
     margin-top: 1.5rem;
 }
 
 .action-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 1rem;
-    background: var(--xobo-light-gray);
-    color: var(--xobo-primary);
-    text-decoration: none;
+    gap: 0.5rem;
+    background: var(--xobo-primary);
+    color: #fff !important;
+    padding: 0.6rem 1.4rem;
     border-radius: 6px;
-    transition: all 0.3s;
-    font-weight: 500;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 2px 6px rgba(22,35,77,0.08);
+    border: none;
+    min-width: 120px;
+    min-height: 44px;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+    cursor: pointer;
+    justify-content: center;
 }
 
 .action-btn:hover {
-    background: var(--xobo-primary);
-    color: white;
-    transform: translateY(-2px);
+    background: var(--xobo-primary-hover);
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(22,35,77,0.15);
+    transform: translateY(-1px) scale(1.03);
 }
 
 .stats-grid {

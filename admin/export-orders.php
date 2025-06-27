@@ -52,6 +52,7 @@ $orderIds = array_column($orders, 'id');
 $orderItems = [];
 $deliveryDetails = [];
 $drivers = [];
+$vehicleTypes = [];
 if ($orderIds) {
     $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
     // Order items
@@ -77,6 +78,12 @@ if ($orderIds) {
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
         $drivers[$d['order_id']] = $d['driver_name'];
     }
+    // Vehicle types
+    $stmt = $pdo->prepare('SELECT order_id, vehicle_type FROM order_vehicle_types WHERE order_id IN (' . $placeholders . ')');
+    $stmt->execute($orderIds);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $v) {
+        $vehicleTypes[$v['order_id']] = $v['vehicle_type'];
+    }
 }
 
 // Output CSV header
@@ -85,7 +92,7 @@ fputcsv($out, [
     'Order ID', 'Company', 'User Email', 'Total (KSH)', 'Status', 'Date',
     'Product Name', 'SKU', 'Quantity', 'Line Total (KSH)',
     'Delivery Destination', 'Delivery Company', 'Delivery Address', 'Recipient', 'Phone',
-    'Driver'
+    'Driver', 'Vehicle Type'
 ]);
 
 foreach ($orders as $order) {
@@ -109,7 +116,8 @@ foreach ($orders as $order) {
                 $d['company_address'] ?? '',
                 $d['recipient_name'] ?? '',
                 $d['recipient_phone'] ?? '',
-                $drivers[$order['id']] ?? ''
+                $drivers[$order['id']] ?? '',
+                $vehicleTypes[$order['id']] ?? ''
             ]);
         }
     } else {
@@ -121,7 +129,9 @@ foreach ($orders as $order) {
             $order['total_ksh'],
             $status,
             $order['created_at'],
-            '', '', '', '', '', '', '', '', '', $drivers[$order['id']] ?? ''
+            '', '', '', '', '', '', '', '', '',
+            $drivers[$order['id']] ?? '',
+            $vehicleTypes[$order['id']] ?? ''
         ]);
     }
 }

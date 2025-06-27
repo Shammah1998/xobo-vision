@@ -28,44 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         } elseif ($action === 'delete') {
             try {
-                // Check if company has any orders (orders should be preserved for business records)
-                $stmt = $pdo->prepare("SELECT COUNT(*) as order_count FROM orders WHERE company_id = ?");
+                $stmt = $pdo->prepare("DELETE FROM companies WHERE id = ?");
                 $stmt->execute([$companyId]);
-                $orderCount = $stmt->fetch()['order_count'];
-                
-                if ($orderCount > 0) {
-                    $error = "Cannot delete company. It has associated orders that must be preserved for business records.";
-                } else {
-                    // Get user count for confirmation message
-                    $stmt = $pdo->prepare("SELECT COUNT(*) as user_count FROM users WHERE company_id = ?");
-                    $stmt->execute([$companyId]);
-                    $userCount = $stmt->fetch()['user_count'];
-                    
-                    // Delete company and all related data
-                    $pdo->beginTransaction();
-                    
-                    // Delete users first
-                    $stmt = $pdo->prepare("DELETE FROM users WHERE company_id = ?");
-                    $stmt->execute([$companyId]);
-                    
-                    // Delete products
-                    $stmt = $pdo->prepare("DELETE FROM products WHERE company_id = ?");
-                    $stmt->execute([$companyId]);
-                    
-                    // Delete company
-                    $stmt = $pdo->prepare("DELETE FROM companies WHERE id = ?");
-                    $stmt->execute([$companyId]);
-                    
-                    $pdo->commit();
-                    
-                    if ($userCount > 0) {
-                        $message = "Company deleted successfully along with {$userCount} associated user(s).";
-                    } else {
-                        $message = "Company deleted successfully.";
-                    }
-                }
+                $message = "Company deleted successfully. All users, orders, and products remain in the database.";
             } catch (PDOException $e) {
-                $pdo->rollBack();
                 $error = "Error deleting company: " . $e->getMessage();
             }
         }

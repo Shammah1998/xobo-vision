@@ -14,9 +14,9 @@ CREATE TABLE users (
   company_id   INT NULL,
   email        VARCHAR(255) UNIQUE NOT NULL,
   password     VARCHAR(255) NOT NULL,
-  role         ENUM('super_admin','company_admin','user') NOT NULL,
+  role         ENUM('super_admin','company_admin','admin','user') NOT NULL,
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (company_id) REFERENCES companies(id)
+  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE SET NULL
 );
 
 -- Products per company
@@ -34,13 +34,13 @@ CREATE TABLE products (
 -- Orders
 CREATE TABLE orders (
   id           INT AUTO_INCREMENT PRIMARY KEY,
-  user_id      INT NOT NULL,
-  company_id   INT NOT NULL,
+  user_id      INT NULL,
+  company_id   INT NULL,
   total_ksh    DECIMAL(12,2) NOT NULL,
   address      TEXT,
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (company_id) REFERENCES companies(id)
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE SET NULL
 );
 
 CREATE TABLE order_items (
@@ -106,6 +106,15 @@ CREATE TABLE drivers (
   driver_name VARCHAR(255) NOT NULL,
   assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (order_id) REFERENCES orders(id)
+);
+
+-- Order vehicle types
+CREATE TABLE order_vehicle_types (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  vehicle_type VARCHAR(32) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
 -- Insert default super admin user

@@ -118,6 +118,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt->execute([$userId, $companyId, $totalCost]);
                 $orderId = $pdo->lastInsertId();
                 
+                // Insert vehicle type for this order
+                $vehicleType = $_POST['vehicle_type'] ?? null;
+                if ($vehicleType && $orderId) {
+                    $stmt = $pdo->prepare("INSERT INTO order_vehicle_types (order_id, vehicle_type) VALUES (?, ?)");
+                    $stmt->execute([$orderId, $vehicleType]);
+                }
+                
                 // Insert order items
                 $stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, quantity, line_total) VALUES (?, ?, ?, ?)");
                 foreach ($orderItems as $item) {
@@ -506,8 +513,6 @@ include '../includes/header.php';
     background: var(--xobo-light-gray);
 }
 
-
-
 .cart-form-actions {
     padding: 1.5rem;
     background: var(--xobo-light-gray);
@@ -516,8 +521,6 @@ include '../includes/header.php';
     justify-content: flex-end;
     flex-wrap: wrap;
 }
-
-
 
 .btn {
     padding: 0.75rem 1.5rem;
@@ -808,6 +811,57 @@ include '../includes/header.php';
         text-align: center;
     }
 }
+
+.vehicle-type-dropdown {
+    margin-left: 0;
+    padding-left: 0;
+    min-width: 220px;
+}
+.vehicle-type-select {
+    padding: 0.5rem 1.5rem 0.5rem 0.75rem;
+    border-radius: 4px;
+    border: 1px solid var(--xobo-border);
+    font-size: 1rem;
+    background: #fff;
+    font-family: inherit;
+    font-weight: 400;
+    min-width: 120px;
+    color: var(--xobo-primary);
+    background-image: none;
+    height: 40px;
+    box-sizing: border-box;
+}
+.cart-form-actions {
+    background: var(--xobo-light-gray);
+    border-top: 1px solid var(--xobo-border);
+    margin-top: 0;
+    border-radius: 0 0 8px 8px;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding: 1.5rem 2rem 1.5rem 2rem;
+}
+.cart-form-actions > div {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+@media (max-width: 900px) {
+    .cart-form-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.5rem;
+        padding: 1.5rem 1rem;
+    }
+    .cart-form-actions > div {
+        justify-content: flex-start;
+    }
+    .vehicle-type-dropdown {
+        margin-bottom: 1rem;
+    }
+}
 </style>
 
 <!-- Company Header -->
@@ -1018,13 +1072,28 @@ include '../includes/header.php';
                         </div>
                     </div>
                     
-                    <div class="cart-form-actions">
-                        <a href="../index.php" class="btn btn-secondary">
-                            <i class="fas fa-home"></i> Home
-                        </a>
-                        <button type="submit" name="confirm_order" id="confirm-order-btn" class="btn btn-primary">
-                            <i class="fas fa-check"></i> Confirm Order
-                        </button>
+                    <div class="cart-form-actions" style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding: 1.5rem 2rem 1.5rem 2rem; background: var(--xobo-light-gray); border-top: 1px solid var(--xobo-border); border-radius: 0 0 8px 8px;">
+                        <div class="vehicle-type-dropdown" style="display: flex; align-items: center; gap: 0.75rem; min-width: 220px;">
+                            <label for="vehicle_type" style="font-weight: 600; color: var(--xobo-primary); margin-bottom: 0;">Vehicle Type:</label>
+                            <select id="vehicle_type" name="vehicle_type" class="vehicle-type-select">
+                                <option value="Motor-Bike">Motor-Bike</option>
+                                <option value="Mini-Van">Mini-Van</option>
+                                <option value="Van">Van</option>
+                                <option value="Pick-Up">Pick-Up</option>
+                                <option value="3 Tonne">3 Tonne</option>
+                                <option value="5 Tonne">5 Tonne</option>
+                                <option value="10 Tonne">10 Tonne</option>
+                                <option value="14 Tonne">14 Tonne</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 1rem;">
+                            <a href="../index.php" class="btn btn-secondary">
+                                <i class="fas fa-home"></i> Home
+                            </a>
+                            <button type="submit" name="confirm_order" id="confirm-order-btn" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Confirm Order
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -1417,6 +1486,19 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Font Awesome icons in select (for modern browsers)
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('vehicle_type');
+    if (select) {
+        for (let i = 0; i < select.options.length; i++) {
+            const opt = select.options[i];
+            if (opt.dataset.icon) {
+                opt.textContent = String.fromCharCode(parseInt(opt.innerHTML.match(/&#x([0-9a-fA-F]+);/)[1], 16)) + ' ' + opt.textContent.replace(/^[^ ]+ /, '');
+            }
+        }
+    }
+});
 </script>
 
 <?php include '../includes/footer.php'; ?> 

@@ -64,6 +64,7 @@ $orderIds = array_column($orders, 'id');
 $orderItems = [];
 $deliveryDetails = [];
 $drivers = [];
+$vehicleTypes = [];
 if ($orderIds) {
     $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
     // Order items
@@ -88,6 +89,12 @@ if ($orderIds) {
     $stmt->execute($orderIds);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
         $drivers[$d['order_id']] = $d['driver_name'];
+    }
+    // Vehicle types
+    $stmt = $pdo->prepare('SELECT order_id, vehicle_type FROM order_vehicle_types WHERE order_id IN (' . $placeholders . ')');
+    $stmt->execute($orderIds);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $v) {
+        $vehicleTypes[$v['order_id']] = $v['vehicle_type'];
     }
 }
 ?>
@@ -171,20 +178,28 @@ if ($orderIds) {
                                                             <span style="color:var(--xobo-gray);">No delivery details</span>
                                                         <?php endif; ?>
                                                     </td>
-                                                    <?php if ($itemIndex === 0): ?>
-                                                        <td rowspan="<?php echo count($orderItems[$order['id']]); ?>" style="vertical-align: top; text-align: right; padding: 0.5rem 1.5rem 0.5rem 1.5rem; min-width: 180px;">
-                                                            <?php if (!empty($drivers[$order['id']])): ?>
-                                                                <span style="color: var(--xobo-primary); font-weight: 600; font-size: 1.05em; background: #f8f9fa; padding: 0.4em 1em; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.5em;">
-                                                                    Driver: <?php echo htmlspecialchars($drivers[$order['id']]); ?>
-                                                                    <button class="delete-driver-btn" data-order-id="<?php echo $order['id']; ?>" title="Remove Driver" style="background: none; border: none; color: #dc3545; font-size: 1.1em; margin-left: 0.5em; cursor: pointer; display: inline-flex; align-items: center;">
-                                                                        <i class="fas fa-times"></i>
-                                                                    </button>
-                                                                </span>
-                                                            <?php endif; ?>
-                                                        </td>
-                                                    <?php endif; ?>
                                                 </tr>
                                             <?php endforeach; ?>
+                                            <!-- Driver and Vehicle Type Row -->
+                                            <tr>
+                                                <td colspan="5" style="padding: 0.7rem 0.5rem 0.7rem 0.5rem; background: #f8f9fa; border-top: 1px solid #eee;">
+                                                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 2.5rem; font-size: 1rem;">
+                                                        <?php if (!empty($drivers[$order['id']])): ?>
+                                                            <span style="color: var(--xobo-primary); font-weight: 600; font-size: 1em; background: #f8f9fa; padding: 0.3em 1em; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.5em;">
+                                                                Driver: <?php echo htmlspecialchars($drivers[$order['id']]); ?>
+                                                                <button class="delete-driver-btn" data-order-id="<?php echo $order['id']; ?>" title="Remove Driver" style="background: none; border: none; color: #dc3545; font-size: 1.1em; margin-left: 0.5em; cursor: pointer; display: inline-flex; align-items: center;">
+                                                                    <i class="fas fa-times"></i>
+                                                                </button>
+                                                            </span>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($vehicleTypes[$order['id']])): ?>
+                                                            <span style="color: var(--xobo-primary); font-weight: 600; font-size: 1em; background: #f8f9fa; padding: 0.3em 1em; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.5em;">
+                                                                Vehicle Type: <?php echo htmlspecialchars($vehicleTypes[$order['id']]); ?>
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                 <?php else: ?>
@@ -196,7 +211,7 @@ if ($orderIds) {
                                     </div>
                                 <?php endif; ?>
                                 <div style="margin-top:1.5rem; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 1rem;">
-                                    <form method="POST" style="display:flex; gap:1rem; align-items:center; margin:0;">
+                                    <form method="POST" class="assign-driver-form" data-order-id="<?php echo $order['id']; ?>" style="display:flex; gap:1rem; align-items:center; margin:0;">
                                         <input type="hidden" name="assign_driver_order_id" value="<?php echo $order['id']; ?>">
                                         <label for="driver_name_<?php echo $order['id']; ?>" style="font-weight:600; color:var(--xobo-primary); margin:0;">Assign Driver:</label>
                                         <input type="text" id="driver_name_<?php echo $order['id']; ?>" name="driver_name" value="" placeholder="Enter driver name" style="padding:0.5rem; border:1px solid #ccc; border-radius:4px; min-width:200px; margin:0;">
@@ -241,12 +256,14 @@ function toggleOrderDetails(orderId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.delete-driver-btn').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
+    // Use event delegation for delete-driver-btn
+    document.body.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-driver-btn')) {
             e.preventDefault();
+            var btn = e.target.closest('.delete-driver-btn');
             if (!confirm('Remove the assigned driver for this order?')) return;
-            var orderId = this.getAttribute('data-order-id');
-            var driverSpan = this.closest('span');
+            var orderId = btn.getAttribute('data-order-id');
+            var driverSpan = btn.closest('span');
             var driverInput = document.getElementById('driver_name_' + orderId);
             fetch('delete-driver.php', {
                 method: 'POST',
@@ -263,13 +280,64 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(() => alert('Failed to remove driver.'));
+        }
+    });
+
+    document.querySelectorAll('.assign-driver-form').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            var orderId = form.getAttribute('data-order-id');
+            var input = form.querySelector('input[name="driver_name"]');
+            var driverName = input.value.trim();
+            if (!driverName) {
+                input.focus();
+                return;
+            }
+            var btn = form.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            fetch('assign-driver.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'assign_driver_order_id=' + encodeURIComponent(orderId) + '&driver_name=' + encodeURIComponent(driverName)
+            })
+            .then(res => res.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.textContent = data.success ? 'Update' : 'Assign';
+                if (data.success) {
+                    // Update the driver label in the table
+                    var detailsRow = form.closest('td');
+                    var driverRow = detailsRow.parentElement.parentElement.querySelector('tr:last-child td > div');
+                    if (driverRow) {
+                        // Remove any existing driver span
+                        driverRow.querySelectorAll('span').forEach(function(span) {
+                            if (span.textContent.includes('Driver:')) span.remove();
+                        });
+                        // Add new driver span
+                        var span = document.createElement('span');
+                        span.style = 'color: var(--xobo-primary); font-weight: 600; font-size: 1em; background: #f8f9fa; padding: 0.3em 1em; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.5em;';
+                        span.innerHTML = 'Driver: ' + data.driver_name +
+                            ' <button class="delete-driver-btn" data-order-id="' + orderId + '" title="Remove Driver" style="background: none; border: none; color: #dc3545; font-size: 1.1em; margin-left: 0.5em; cursor: pointer; display: inline-flex; align-items: center;"><i class="fas fa-times"></i></button>';
+                        driverRow.prepend(span);
+                        input.value = '';
+                    }
+                } else {
+                    alert(data.error || 'Failed to assign driver.');
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                btn.textContent = 'Assign';
+                alert('Failed to assign driver.');
+            });
         });
     });
-});
 
-document.getElementById('download-csv-btn').addEventListener('click', function() {
-    const params = new URLSearchParams(window.location.search);
-    window.location.href = 'export-orders.php?' + params.toString();
+    document.getElementById('download-csv-btn').addEventListener('click', function() {
+        const params = new URLSearchParams(window.location.search);
+        window.location.href = 'export-orders.php?' + params.toString();
+    });
 });
 </script>
 

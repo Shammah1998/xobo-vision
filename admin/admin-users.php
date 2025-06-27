@@ -14,9 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_admin_id'])) {
         $error = "The founder admin cannot be deleted.";
     } else {
         try {
-            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ? AND role = 'super_admin'");
+            $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
             $stmt->execute([$deleteId]);
-            $message = "Admin user deleted successfully.";
+            $message = "Admin user deleted successfully. All related data remains in the database.";
         } catch (PDOException $e) {
             $error = "Error deleting admin user.";
         }
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_admin_id'])) {
 
 // Search filter
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$sql = "SELECT id, email, created_at FROM users WHERE role = 'super_admin'";
+$sql = "SELECT id, email, role, created_at FROM users WHERE role IN ('super_admin', 'admin')";
 $params = [];
 if ($search) {
     $sql .= " AND email LIKE ?";
@@ -92,6 +92,7 @@ $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <tr>
                     <th>Admin ID</th>
                     <th>Email Address</th>
+                    <th>Role</th>
                     <th>Status</th>
                     <th>Created</th>
                     <th style="width: 120px; text-align: center;">Actions</th>
@@ -103,6 +104,7 @@ $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <tr id="admin-row-<?php echo $row['id']; ?>">
                         <td>#<?php echo htmlspecialchars($row['id']); ?></td>
                         <td><?php echo htmlspecialchars($row['email']); ?></td>
+                        <td><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $row['role']))); ?></td>
                         <td><span class="status-badge status-approved">Active</span></td>
                         <td><?php echo date('M d, Y', strtotime($row['created_at'])); ?></td>
                         <td style="padding: 0; height: 100%; width: 120px; text-align: center;">
