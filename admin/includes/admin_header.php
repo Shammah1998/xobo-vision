@@ -301,7 +301,7 @@ if (!isAdmin($pdo)) {
 
                 <div class="nav-section">
                     <div class="nav-section-title">Admin Management</div>
-                    <a href="/xobo-vision/admin/admins.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'admins.php' ? 'active' : ''; ?>">
+                    <a href="/xobo-vision/admin/admin-users.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'admin-users.php' ? 'active' : ''; ?>">
                         <i class="fas fa-user-shield"></i> Admin Users
                     </a>
                     <a href="/xobo-vision/admin/invite-admin.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'invite-admin.php' ? 'active' : ''; ?>">
@@ -310,17 +310,13 @@ if (!isAdmin($pdo)) {
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-section-title">System</div>
-                    <a href="/xobo-vision/admin/settings.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'settings.php' ? 'active' : ''; ?>">
-                        <i class="fas fa-cog"></i> Settings
+                    <div class="nav-section-title">Order Management</div>
+                    <a href="/xobo-vision/admin/orders.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'orders.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-box"></i> All Orders
                     </a>
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-section-title">Account</div>
-                    <a href="/xobo-vision/index.php" class="nav-item">
-                        <i class="fas fa-home"></i> Back to Site
-                    </a>
                     <a href="/xobo-vision/auth/logout.php" class="nav-item">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>

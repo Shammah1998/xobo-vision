@@ -114,20 +114,26 @@ include 'includes/admin_header.php';
                             </span>
                         </td>
                         <td><?php echo date('M j, Y', strtotime($company['created_at'])); ?></td>
-                        <td>
-                            <?php if ($company['status'] === 'pending'): ?>
-                                <form method="POST" style="display: inline;">
+                        <td style="padding: 0; height: 100%; width: 80px; text-align: center;">
+                            <div style="display: flex; justify-content: center; align-items: center; height: 100%; min-height: 40px; width: 100%;">
+                                <form method="POST" style="display:inline-block; margin:0;" onsubmit="return confirmDeleteDashboard('<?php echo htmlspecialchars($company['name'], ENT_QUOTES); ?>')">
                                     <input type="hidden" name="company_id" value="<?php echo $company['id']; ?>">
-                                    <button type="submit" name="action" value="approved" class="btn btn-success btn-sm">
-                                        Approve
-                                    </button>
-                                    <button type="submit" name="action" value="rejected" class="btn btn-danger btn-sm">
-                                        Reject
+                                    <button type="submit" name="action" value="delete" class="delete-btn" title="Delete Company & Users" style="background: #dc3545; color: white; border: none; padding: 0; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; width: 32px; height: 32px; margin: 0 auto;">
+                                        <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
-                            <?php else: ?>
-                                <span style="color: var(--xobo-gray); font-size: 0.8rem;">No actions</span>
-                            <?php endif; ?>
+                                <?php if ($company['status'] === 'pending'): ?>
+                                    <form method="POST" style="display: inline; margin-left: 8px;">
+                                        <input type="hidden" name="company_id" value="<?php echo $company['id']; ?>">
+                                        <button type="submit" name="action" value="approved" class="btn btn-success btn-sm">
+                                            Approve
+                                        </button>
+                                        <button type="submit" name="action" value="rejected" class="btn btn-danger btn-sm">
+                                            Reject
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -144,5 +150,11 @@ include 'includes/admin_header.php';
     </div>
     <?php endif; ?>
 </div>
+
+<script>
+function confirmDeleteDashboard(companyName) {
+    return confirm('Are you sure you want to delete "' + companyName + '"? This will delete the company and all its users and products. This action CANNOT be undone!');
+}
+</script>
 
 <?php include 'includes/admin_footer.php'; ?> 
