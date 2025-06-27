@@ -123,6 +123,18 @@ $countStmt->execute($params);
 $totalCompanies = $countStmt->fetch()['total'];
 $totalPages = ceil($totalCompanies / $perPage);
 
+// Fetch users for all companies in the current page
+$companyIds = array_column($companies, 'id');
+$usersByCompany = [];
+if ($companyIds) {
+    $placeholders = implode(',', array_fill(0, count($companyIds), '?'));
+    $stmt = $pdo->prepare('SELECT id, company_id, email, role, created_at FROM users WHERE company_id IN (' . $placeholders . ')');
+    $stmt->execute($companyIds);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $user) {
+        $usersByCompany[$user['company_id']][] = $user;
+    }
+}
+
 $pageTitle = 'Company Management';
 include 'includes/admin_header.php';
 ?>
@@ -149,30 +161,16 @@ include 'includes/admin_header.php';
     <form method="GET" style="display: flex; gap: 1rem; align-items: end; flex-wrap: wrap;">
         <div>
             <label style="display: block; margin-bottom: 0.5rem; color: var(--xobo-primary); font-weight: 500;">
-                Status Filter
-            </label>
-            <select name="status" style="padding: 8px; border: 1px solid var(--xobo-border); border-radius: 4px;">
-                <option value="all" <?php echo $statusFilter === 'all' ? 'selected' : ''; ?>>All Companies</option>
-                <option value="pending" <?php echo $statusFilter === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                <option value="approved" <?php echo $statusFilter === 'approved' ? 'selected' : ''; ?>>Approved</option>
-                <option value="rejected" <?php echo $statusFilter === 'rejected' ? 'selected' : ''; ?>>Rejected</option>
-            </select>
-        </div>
-        
-        <div>
-            <label style="display: block; margin-bottom: 0.5rem; color: var(--xobo-primary); font-weight: 500;">
                 Search
             </label>
             <input type="text" name="search" value="<?php echo htmlspecialchars($searchTerm); ?>" 
                    placeholder="Company name or email..."
                    style="padding: 8px; border: 1px solid var(--xobo-border); border-radius: 4px; width: 200px;">
         </div>
-        
         <button type="submit" style="background: var(--xobo-primary); color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">
             <i class="fas fa-search"></i> Filter
         </button>
-        
-        <?php if ($statusFilter !== 'all' || $searchTerm): ?>
+        <?php if ($searchTerm): ?>
             <a href="companies.php" style="background: var(--xobo-gray); color: white; padding: 8px 16px; border-radius: 4px; text-decoration: none;">
                 <i class="fas fa-times"></i> Clear
             </a>
@@ -194,9 +192,9 @@ include 'includes/admin_header.php';
                 <tr>
                     <th>Company Details</th>
                     <th>Admin</th>
-                    <th>Status</th>
                     <th>Statistics</th>
                     <th>Registered</th>
+                    <th>Users</th>
                     <th style="text-align: center;">Actions</th>
                 </tr>
             </thead>
@@ -229,11 +227,6 @@ include 'includes/admin_header.php';
                             <?php endif; ?>
                         </td>
                         <td>
-                            <span class="status-badge status-<?php echo $company['status']; ?>">
-                                <?php echo ucfirst($company['status']); ?>
-                            </span>
-                        </td>
-                        <td>
                             <div style="font-size: 0.8rem; color: var(--xobo-gray);">
                                 <div>Users: <?php echo $company['user_count']; ?></div>
                                 <div>Products: <?php echo $company['product_count']; ?></div>
@@ -246,21 +239,62 @@ include 'includes/admin_header.php';
                                 <?php echo date('H:i', strtotime($company['created_at'])); ?>
                             </div>
                         </td>
+                        <td style="text-align:center; width: 70px;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+                                <button type="button" class="btn btn-primary btn-sm view-users-btn" onclick="toggleUsersDropdown(<?php echo $company['id']; ?>)" data-company-id="<?php echo $company['id']; ?>" id="view-users-btn-<?php echo $company['id']; ?>" style="min-width: 60px; display: flex; align-items: center; justify-content: center; gap: 0.4em;">
+                                    View
+                                    <i class="fas fa-chevron-down" id="chevron-icon-<?php echo $company['id']; ?>" style="transition: transform 0.2s;"></i>
+                                </button>
+                                <a href="company-products.php?company_id=<?php echo $company['id']; ?>" class="btn btn-secondary btn-sm" style="min-width: 60px; display: flex; align-items: center; justify-content: center; gap: 0.4em;">
+                                    Products
+                                    <i class="fas fa-box-open"></i>
+                                </a>
+                            </div>
+                        </td>
                         <td style="text-align: center; vertical-align: middle;">
                             <div style="display: flex; justify-content: center; align-items: center; min-height: 40px;">
-                                <?php if ($company['order_count'] == 0): ?>
-                                    <form method="POST" style="margin: 0;" onsubmit="return confirmDelete(<?php echo $company['user_count']; ?>, '<?php echo htmlspecialchars($company['name'], ENT_QUOTES); ?>')">
-                                        <input type="hidden" name="company_id" value="<?php echo $company['id']; ?>">
-                                        <button type="submit" name="action" value="delete" class="delete-btn" title="Delete Company & Users">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                <?php else: ?>
-                                    <span class="lock-icon" title="Cannot delete: Company has orders that must be preserved">
-                                        <i class="fas fa-lock"></i>
-                                    </span>
-                                <?php endif; ?>
+                                <form method="POST" style="margin: 0;" onsubmit="return confirmDelete(<?php echo $company['user_count']; ?>, '<?php echo htmlspecialchars($company['name'], ENT_QUOTES); ?>')">
+                                    <input type="hidden" name="company_id" value="<?php echo $company['id']; ?>">
+                                    <button type="submit" name="action" value="delete" class="delete-btn" title="Delete Company & Users">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                             </div>
+                        </td>
+                    </tr>
+                    <tr class="users-dropdown-row" id="users-dropdown-<?php echo $company['id']; ?>" style="display:none; background:#f8f9fa;">
+                        <td colspan="7" style="padding:1.5rem 2rem;">
+                            <h4 style="color:var(--xobo-primary); margin-bottom:0.75rem;">Users for <?php echo htmlspecialchars($company['name']); ?></h4>
+                            <?php if (!empty($usersByCompany[$company['id']])): ?>
+                                <table style="width:100%; border-collapse:collapse; margin-bottom:1rem;">
+                                    <thead>
+                                        <tr style="background:#f0f0f0;">
+                                            <th style="padding:0.5rem; text-align:left;">User ID</th>
+                                            <th style="padding:0.5rem; text-align:left;">Email</th>
+                                            <th style="padding:0.5rem; text-align:left;">Role</th>
+                                            <th style="padding:0.5rem; text-align:left;">Created</th>
+                                            <th style="padding:0.5rem; text-align:center;">Edit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($usersByCompany[$company['id']] as $user): ?>
+                                            <tr>
+                                                <td style="padding:0.5rem;">#<?php echo htmlspecialchars($user['id']); ?></td>
+                                                <td style="padding:0.5rem;"><?php echo htmlspecialchars($user['email']); ?></td>
+                                                <td style="padding:0.5rem; text-transform:capitalize;"><?php echo htmlspecialchars($user['role']); ?></td>
+                                                <td style="padding:0.5rem;"><?php echo date('M d, Y', strtotime($user['created_at'])); ?></td>
+                                                <td style="padding:0.5rem; text-align:center;">
+                                                    <a href="edit-user.php?id=<?php echo $user['id']; ?>" class="btn btn-primary btn-sm" title="Edit User" style="padding: 0.4rem 0.7rem; min-width: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-pen"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php else: ?>
+                                <div style="color:var(--xobo-gray);">No users found for this company.</div>
+                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -366,6 +400,18 @@ function confirmDelete(userCount, companyName) {
     }
     
     return confirm(message);
+}
+
+function toggleUsersDropdown(companyId) {
+    const row = document.getElementById('users-dropdown-' + companyId);
+    const icon = document.getElementById('chevron-icon-' + companyId);
+    if (row.style.display === 'none' || row.style.display === '') {
+        row.style.display = 'table-row';
+        if (icon) icon.style.transform = 'rotate(180deg)';
+    } else {
+        row.style.display = 'none';
+        if (icon) icon.style.transform = 'rotate(0deg)';
+    }
 }
 </script>
 
