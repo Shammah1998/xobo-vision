@@ -57,8 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $recipientName = sanitize($_POST['recipient_name'] ?? '');
         $recipientPhone = sanitize($_POST['recipient_phone'] ?? '');
         
-        // Check if any detail is provided
-        if (!empty($destination) || !empty($companyName) || !empty($companyAddress) || !empty($recipientName) || !empty($recipientPhone)) {
+        // Require both destination and company name
+        if (!empty($destination) && !empty($companyName)) {
             $stmt = $pdo->prepare("INSERT INTO delivery_details (user_id, product_id, session_id, destination, company_name, company_address, recipient_name, recipient_phone) 
                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
                                    ON DUPLICATE KEY UPDATE 
@@ -70,11 +70,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                    updated_at = CURRENT_TIMESTAMP");
             $stmt->execute([$userId, $productId, session_id(), $destination, $companyName, $companyAddress, $recipientName, $recipientPhone]);
             $message = "Delivery details saved successfully!";
-        } else {
+        } else if (empty($destination) && empty($companyName) && empty($companyAddress) && empty($recipientName) && empty($recipientPhone)) {
             // Delete if all fields are empty
             $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND product_id = ? AND session_id = ?");
             $stmt->execute([$userId, $productId, session_id()]);
             $message = "Delivery details cleared!";
+        } else {
+            $error = "Please fill in both Destination and Company Name.";
         }
     } elseif (isset($_POST['delete_delivery_details'])) {
         // Handle deleting delivery details
@@ -862,6 +864,12 @@ include '../includes/header.php';
         margin-bottom: 1rem;
     }
 }
+.required-star {
+    color: #dc2626;
+    font-size: 1rem;
+    margin-left: 2px;
+    vertical-align: middle;
+}
 </style>
 
 <!-- Company Header -->
@@ -993,20 +1001,20 @@ include '../includes/header.php';
                                             <div class="delivery-form-grid">
                                                 <div class="form-group">
                                                     <label for="destination_<?php echo $item['product']['id']; ?>">
-                                                        <i class="fas fa-map-marker-alt"></i> Destination
+                                                        <i class="fas fa-map-marker-alt"></i> Destination <span class="required-star">*</span>
                                                     </label>
                                                     <input type="text" id="destination_<?php echo $item['product']['id']; ?>" 
                                                            name="destination" placeholder="Where is this item going?"
-                                                           value="<?php echo htmlspecialchars($item['delivery_details']['destination'] ?? ''); ?>">
+                                                           value="<?php echo htmlspecialchars($item['delivery_details']['destination'] ?? ''); ?>" required>
                                                 </div>
                                                 
                                                 <div class="form-group">
                                                     <label for="company_name_<?php echo $item['product']['id']; ?>">
-                                                        <i class="fas fa-building"></i> Company Name
+                                                        <i class="fas fa-building"></i> Company Name <span class="required-star">*</span>
                                                     </label>
                                                     <input type="text" id="company_name_<?php echo $item['product']['id']; ?>" 
                                                            name="company_name" placeholder="Receiving company name"
-                                                           value="<?php echo htmlspecialchars($item['delivery_details']['company_name'] ?? ''); ?>">
+                                                           value="<?php echo htmlspecialchars($item['delivery_details']['company_name'] ?? ''); ?>" required>
                                                 </div>
                                                 
                                                 <div class="form-group full-width">
@@ -1076,6 +1084,7 @@ include '../includes/header.php';
                         <div class="vehicle-type-dropdown" style="display: flex; align-items: center; gap: 0.75rem; min-width: 220px;">
                             <label for="vehicle_type" style="font-weight: 600; color: var(--xobo-primary); margin-bottom: 0;">Vehicle Type:</label>
                             <select id="vehicle_type" name="vehicle_type" class="vehicle-type-select">
+                                <option value="">-select-</option>
                                 <option value="Motor-Bike">Motor-Bike</option>
                                 <option value="Mini-Van">Mini-Van</option>
                                 <option value="Van">Van</option>
@@ -1434,16 +1443,13 @@ function deleteDeliveryDetails(productId) {
 }
 
 // Check if any delivery details exist and update confirm button
-function checkDeliveryDetailsAndUpdateButton() {
+function checkDeliveryDetailsAndUpdateButton(onlyCheck) {
     const confirmBtn = document.getElementById('confirm-order-btn');
     let hasDetails = false;
-    
-    // Check if any status indicators show filled details (from server-side data)
     const filledIndicators = document.querySelectorAll('.status-indicator.filled');
     if (filledIndicators.length > 0) {
         hasDetails = true;
     } else {
-        // Also check current form field values for unsaved changes
         const deliveryForms = document.querySelectorAll('.delivery-form');
         deliveryForms.forEach(form => {
             const inputs = form.querySelectorAll('input[type="text"], input[type="tel"], textarea');
@@ -1454,21 +1460,10 @@ function checkDeliveryDetailsAndUpdateButton() {
             });
         });
     }
-    
-    // Button state will be updated below
-    
-    if (confirmBtn) {
-        if (hasDetails) {
-            confirmBtn.disabled = false;
-            confirmBtn.title = '';
-            confirmBtn.classList.remove('btn-disabled');
-        } else {
-            confirmBtn.disabled = true;
-            confirmBtn.title = 'Please add delivery details for at least one product';
-            confirmBtn.classList.add('btn-disabled');
-        }
+    if (!onlyCheck) {
+        // Instead of updating button here, call the new combined check
+        checkVehicleTypeAndUpdateButton();
     }
-    
     return hasDetails;
 }
 
@@ -1499,6 +1494,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+// --- VEHICLE TYPE CHECK ---
+function checkVehicleTypeAndUpdateButton() {
+    const vehicleTypeSelect = document.getElementById('vehicle_type');
+    const confirmBtn = document.getElementById('confirm-order-btn');
+    // Also check delivery details
+    const hasDeliveryDetails = checkDeliveryDetailsAndUpdateButton(true); // pass true to only check, not update
+    let vehicleTypeValid = false;
+    if (vehicleTypeSelect) {
+        vehicleTypeValid = !!vehicleTypeSelect.value && vehicleTypeSelect.value.trim() !== '';
+    }
+    if (confirmBtn) {
+        if (hasDeliveryDetails && vehicleTypeValid) {
+            confirmBtn.disabled = false;
+            confirmBtn.title = '';
+            confirmBtn.classList.remove('btn-disabled');
+        } else if (!hasDeliveryDetails) {
+            confirmBtn.disabled = true;
+            confirmBtn.title = 'Please add delivery details for at least one product';
+            confirmBtn.classList.add('btn-disabled');
+        } else if (!vehicleTypeValid) {
+            confirmBtn.disabled = true;
+            confirmBtn.title = 'Please select a vehicle type';
+            confirmBtn.classList.add('btn-disabled');
+        }
+    }
+    return hasDeliveryDetails && vehicleTypeValid;
+}
+
+// Add vehicle type change event
+const vehicleTypeSelect = document.getElementById('vehicle_type');
+if (vehicleTypeSelect) {
+    vehicleTypeSelect.addEventListener('change', checkVehicleTypeAndUpdateButton);
+}
+// Initial combined check
+checkVehicleTypeAndUpdateButton();
 </script>
 
 <?php include '../includes/footer.php'; ?> 
