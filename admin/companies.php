@@ -1,11 +1,12 @@
 <?php
+require_once '../config/config.php';
 session_start();
 require_once '../config/db.php';
 require_once '../includes/functions.php';
 
 // Check if user is admin (first user or super_admin)
 if (!isAdmin($pdo)) {
-    header('Location: /xobo-c/index.php');
+    header('Location: ' . BASE_URL . '/index.php');
     exit;
 }
 

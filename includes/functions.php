@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../config/config.php';
+
 // Utility functions
 
 // Sanitize input data
@@ -46,22 +48,22 @@ function hasRole($role) {
 // Redirect based on role
 function redirectByRole() {
     if (!isLoggedIn()) {
-        header('Location: /xobo-c/auth/login.php');
+        header('Location: ' . BASE_URL . '/auth/login.php');
         exit;
     }
     
     switch ($_SESSION['role']) {
         case 'super_admin':
-            header('Location: /xobo-c/admin/dashboard.php');
+            header('Location: ' . BASE_URL . '/admin/dashboard.php');
             break;
         case 'company_admin':
-            header('Location: /xobo-c/company/products.php');
+            header('Location: ' . BASE_URL . '/company/products.php');
             break;
         case 'user':
-            header('Location: /xobo-c/shop/shop.php?cid=' . $_SESSION['company_id']);
+            header('Location: ' . BASE_URL . '/shop/shop.php?cid=' . $_SESSION['company_id']);
             break;
         default:
-            header('Location: /xobo-c/auth/login.php');
+            header('Location: ' . BASE_URL . '/auth/login.php');
     }
     exit;
 }

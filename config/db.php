@@ -1,9 +1,6 @@
 <?php
-// Database configuration
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'xobo-c');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+// Include main configuration
+require_once __DIR__ . '/config.php';
 
 try {
     $pdo = new PDO(

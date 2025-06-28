@@ -1,14 +1,15 @@
 <?php
+require_once '../config/config.php';
 session_start();
-require_once '../config/db.php';
 require_once '../includes/functions.php';
+require_once '../config/db.php';
 
 // Redirect if already logged in
 if (isLoggedIn()) {
     if (isAdmin($pdo)) {
-        header('Location: /xobo-c/admin/dashboard.php');
+        header('Location: ' . BASE_URL . '/admin/dashboard.php');
     } else {
-        header('Location: /xobo-c/index.php');
+        header('Location: ' . BASE_URL . '/index.php');
     }
     exit;
 }
@@ -42,10 +43,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Redirect based on admin status and user role
                     if (isAdmin($pdo)) {
-                        header('Location: /xobo-c/admin/dashboard.php');
+                        header('Location: ' . BASE_URL . '/admin/dashboard.php');
                     } else {
                         // Redirect users to company-specific homepage
-                        header('Location: /xobo-c/index.php');
+                        header('Location: ' . BASE_URL . '/index.php');
                     }
                     exit;
                 }

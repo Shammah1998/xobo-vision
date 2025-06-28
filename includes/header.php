@@ -1,7 +1,5 @@
 <?php
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/functions.php';
 require_once __DIR__ . '/../config/db.php';
 ?>
@@ -12,15 +10,15 @@ require_once __DIR__ . '/../config/db.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) : 'XOBO MART - Online Shopping'; ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/xobo-c/assets/css/style.css">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
 </head>
 <body>
     <!-- SIMPLIFIED NAVIGATION - LOGO ONLY -->
     <nav class="header">
         <div class="container">
             <div class="nav-brand">
-                <a href="/xobo-c/">
-                    <img src="/xobo-c/assets/images/xobo-logo.png" alt="XOBO MART" class="logo">
+                <a href="<?php echo BASE_URL; ?>/">
+                    <img src="<?php echo BASE_URL; ?>/assets/images/xobo-logo.png" alt="XOBO MART" class="logo">
                 </a>
             </div>
             
@@ -38,7 +36,7 @@ require_once __DIR__ . '/../config/db.php';
                                 <small><?php echo htmlspecialchars($_SESSION['role']); ?></small>
                             </div>
                             <div class="dropdown-divider"></div>
-                            <a href="/xobo-c/auth/logout.php" class="dropdown-item logout-link">
+                            <a href="<?php echo BASE_URL; ?>/auth/logout.php" class="dropdown-item logout-link">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </a>
                         </div>

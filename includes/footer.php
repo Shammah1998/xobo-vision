@@ -1,4 +1,6 @@
-        </div>
+<?php
+require_once __DIR__ . '/../config/config.php';
+?>
     </main>
     
     <!-- XOBO-MART STYLE FOOTER -->
@@ -10,6 +12,6 @@
         </div>
     </footer>
     
-    <script src="/xobo-c/assets/js/shop.js"></script>
+    <script src="<?php echo BASE_URL; ?>/assets/js/shop.js"></script>
 </body>
 </html> 

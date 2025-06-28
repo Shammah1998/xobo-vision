@@ -1,11 +1,12 @@
 <?php
+require_once '../config/config.php';
 session_start();
-require_once '../config/db.php';
 require_once '../includes/functions.php';
+require_once '../config/db.php';
 
 // Check if user is admin (first user or super_admin)
 if (!isAdmin($pdo)) {
-    header('Location: /xobo-c/index.php');
+    header('Location: ' . BASE_URL . '/index.php');
     exit;
 }
 
@@ -204,7 +205,7 @@ include 'includes/admin_header.php';
 
     <?php if (count($recentCompanies) >= 10): ?>
     <div style="text-align: center; margin-top: 1rem;">
-        <a href="/xobo-c/admin/companies.php" class="btn" style="background: var(--xobo-primary); color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 4px;">
+        <a href="<?php echo BASE_URL; ?>/admin/companies.php" class="btn" style="background: var(--xobo-primary); color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 4px;">
             View All Companies
         </a>
     </div>

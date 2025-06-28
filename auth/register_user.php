@@ -1,11 +1,12 @@
 <?php
+require_once '../config/config.php';
 session_start();
-require_once '../config/db.php';
 require_once '../includes/functions.php';
+require_once '../config/db.php';
 
 // Redirect if already logged in
 if (isLoggedIn()) {
-    header('Location: /xobo-c/index.php');
+    header('Location: ' . BASE_URL . '/index.php');
     exit;
 }
 
