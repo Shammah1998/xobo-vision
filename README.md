@@ -112,7 +112,6 @@ xobo-vision/
 ├── shop/
 │   ├── shop.php              # Product catalog
 │   ├── cart.php              # Shopping cart
-│   ├── checkout.php          # Order placement
 │   └── orders.php            # Order history
 ├── includes/
 │   ├── header.php            # Common header

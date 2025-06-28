@@ -119,5 +119,5 @@ CREATE TABLE order_vehicle_types (
 
 -- Insert default super admin user
 INSERT INTO users (email, password, role) VALUES 
-('admin@xobo.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'super_admin');
--- Default password is 'password' - change this in production! 
+('support@xobo.co.ke', '$2y$10$7v7GGrwENRTFL850XyVl4.TYByBqqr2xmTVQPO/wBJV/dr/9RG33C', 'super_admin');
+-- Default password is 'Xobo@2025' - change this in production! 
