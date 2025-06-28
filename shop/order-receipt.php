@@ -383,16 +383,10 @@ $pageTitle = 'Receipt #' . $orderId;
         /* Print Styles */
         @media print {
             @page {
-                margin: 0.3in 0.5in;
+                margin: 0.2in 0.2in;
                 size: A4;
             }
             
-            /* Hide browser headers and footers */
-            html {
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-
             * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
@@ -400,17 +394,11 @@ $pageTitle = 'Receipt #' . $orderId;
 
             body {
                 background: white !important;
-                font-size: 14px; /* Keep same as screen */
-                padding-top: 0;
-                margin: 0;
+                font-size: 9px !important;
+                padding-top: 0 !important;
+                margin: 0 !important;
                 font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                line-height: 1.5; /* Keep same as screen */
-            }
-            
-            /* Force hide browser headers/footers */
-            body:before,
-            body:after {
-                display: none !important;
+                line-height: 1.2 !important;
             }
             
             .navbar {
@@ -419,12 +407,13 @@ $pageTitle = 'Receipt #' . $orderId;
             
             .receipt-container {
                 box-shadow: none;
-                margin: 0;
-                max-width: 100%;
-                border-radius: 8px;
-                overflow: hidden;
+                margin: 0 auto !important;
+                max-width: 650px !important;
+                border-radius: 0;
+                overflow: visible;
                 background: white;
-                page-break-inside: avoid;
+                page-break-inside: avoid !important;
+                padding-bottom: 0 !important;
             }
             
             .receipt-header {
@@ -432,59 +421,50 @@ $pageTitle = 'Receipt #' . $orderId;
                 color: white !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 1.5rem 2rem !important; /* Keep same as screen */
+                padding: 0.5rem 0.8rem !important;
                 display: flex !important;
-                flex-direction: row !important; /* Force horizontal layout */
+                flex-direction: row !important;
                 align-items: center !important;
                 justify-content: space-between !important;
-                border-bottom: 2px solid var(--xobo-border); /* Keep same as screen */
+                border-bottom: 1px solid var(--xobo-border);
                 width: 100%;
                 box-sizing: border-box;
-                gap: 0 !important; /* Override mobile gap */
-                text-align: left !important; /* Override mobile text-align */
+                gap: 0 !important;
+                text-align: left !important;
             }
 
-            .header-left {
-                display: flex !important;
-                align-items: center !important;
-                flex: 1 !important; /* Keep same as screen */
-                justify-content: flex-start !important; /* Override mobile center */
+            .header-left, .header-center, .header-right {
+                flex: 1 !important;
             }
 
             .header-center {
-                flex: 1 !important; /* Keep same as screen */
                 text-align: center !important;
             }
 
             .header-right {
-                flex: 1 !important; /* Keep same as screen */
                 text-align: right !important;
             }
 
             .company-name {
-                font-size: 1.3rem; /* Keep same as screen */
+                font-size: 0.9rem !important;
                 font-weight: 700;
-                letter-spacing: 0.1em;
+                letter-spacing: 0.05em;
             }
 
-            .company-name img {
-                width: 80px !important; /* Fixed size for print visibility */
-                height: auto;
-                object-fit: contain;
-                filter: brightness(0) invert(1);
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
+            .company-name svg {
+                width: 60px !important;
+                height: 24px !important;
             }
 
             .receipt-title {
-                font-size: 1.8rem; /* Keep same as screen */
+                font-size: 1.2rem !important;
                 font-weight: 600;
                 margin: 0;
                 color: white;
             }
 
             .receipt-date {
-                font-size: 1rem; /* Keep same as screen */
+                font-size: 0.8rem !important;
                 font-weight: 500;
                 color: white;
                 opacity: 0.9;
@@ -494,18 +474,19 @@ $pageTitle = 'Receipt #' . $orderId;
                 background: var(--xobo-light-gray) !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 0.75rem 2rem; /* Keep same as screen */
+                padding: 0.2rem 0.8rem !important;
                 text-align: center;
                 color: var(--text-secondary);
-                font-size: 0.9rem; /* Keep same as screen */
+                font-size: 0.7rem !important;
                 border-bottom: 1px solid var(--xobo-border);
             }
 
             .table-section {
-                padding: 2rem; /* Keep same as screen */
+                padding: 0.3rem 0.8rem !important;
                 border-bottom: 1px solid var(--xobo-border);
                 background: white;
                 page-break-inside: avoid;
+                margin-bottom: 0 !important;
             }
 
             .table-section:last-of-type {
@@ -513,20 +494,20 @@ $pageTitle = 'Receipt #' . $orderId;
             }
 
             .section-title {
-                font-size: 1.2rem; /* Keep same as screen */
+                font-size: 0.8rem !important;
                 font-weight: 600;
                 color: var(--xobo-primary);
-                margin-bottom: 1rem; /* Keep same as screen */
+                margin-bottom: 0.2rem !important;
                 display: flex;
                 align-items: center;
-                gap: 0.5rem; /* Keep same as screen */
+                gap: 0.3rem;
             }
 
             .data-table {
                 width: 100%;
                 border-collapse: collapse;
                 border: 1px solid var(--xobo-border);
-                border-radius: 6px;
+                border-radius: 3px;
                 overflow: hidden;
                 background: white;
             }
@@ -535,18 +516,19 @@ $pageTitle = 'Receipt #' . $orderId;
                 background: var(--xobo-light-gray) !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 0.75rem; /* Keep same as screen */
+                padding: 0.2rem 0.3rem !important;
                 text-align: left;
                 font-weight: 600;
                 color: var(--xobo-primary) !important;
                 border-bottom: 1px solid var(--xobo-border);
-                font-size: 0.9rem; /* Keep same as screen */
+                font-size: 0.75em !important;
             }
             
             .data-table td {
-                padding: 0.75rem; /* Keep same as screen */
+                padding: 0.2rem 0.3rem !important;
                 border-bottom: 1px solid #eee;
                 vertical-align: top;
+                font-size: 0.8em !important;
             }
 
             .data-table tbody tr:last-child td {
@@ -567,9 +549,9 @@ $pageTitle = 'Receipt #' . $orderId;
                 background: var(--xobo-light-gray) !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                padding: 0.2rem 0.4rem;
-                border-radius: 3px;
-                font-size: 0.8rem;
+                padding: 0.1rem 0.2rem;
+                border-radius: 2px;
+                font-size: 0.7rem;
                 color: var(--text-secondary);
             }
 
@@ -586,7 +568,7 @@ $pageTitle = 'Receipt #' . $orderId;
             .delivery-label {
                 font-weight: 600;
                 color: var(--text-secondary);
-                width: 150px;
+                width: 120px;
             }
 
             .delivery-value {
@@ -594,12 +576,13 @@ $pageTitle = 'Receipt #' . $orderId;
             }
 
             .totals-table {
-                width: 400px; /* Keep same as screen */
+                width: 200px !important;
                 margin-left: auto;
             }
 
             .totals-table td {
-                padding: 0.5rem 0.75rem; /* Keep same as screen */
+                padding: 0.15rem 0.3rem !important;
+                font-size: 0.8em !important;
             }
 
             .totals-label {
@@ -617,34 +600,63 @@ $pageTitle = 'Receipt #' . $orderId;
                 background: var(--xobo-light-gray) !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
-                border-top: 2px solid var(--xobo-border);
+                border-top: 1px solid var(--xobo-border);
             }
 
             .grand-total-row .totals-label {
                 font-weight: 700;
                 color: var(--xobo-primary) !important;
-                font-size: 1.1rem; /* Keep same as screen */
+                font-size: 0.85em !important;
             }
 
             .grand-total-row .totals-value {
                 font-weight: 700;
                 color: var(--xobo-primary) !important;
-                font-size: 1.1rem; /* Keep same as screen */
+                font-size: 0.85em !important;
             }
 
-            /* Ensure footer prints correctly */
+            /* Signature section: ultra-compact */
+            .table-section.signature-section {
+                padding-top: 0.2rem !important;
+                padding-bottom: 0.2rem !important;
+            }
+            
+            .table-section.signature-section .signature-title {
+                font-size: 0.7rem !important;
+                margin-bottom: 0.2rem !important;
+            }
+            
+            .table-section.signature-section .vertical-divider {
+                height: 40px !important;
+            }
+            
+            .table-section.signature-section div[style*='border-bottom'] {
+                height: 0.8em !important;
+                min-width: 60px !important;
+                width: 40% !important;
+            }
+            
+            .table-section.signature-section label {
+                font-size: 0.6rem !important;
+            }
+            
+            .table-section.signature-section > div[style*='display: flex'] > div {
+                margin-bottom: 0.15rem !important;
+            }
+
+            /* Footer */
             .footer {
                 background: white !important;
                 border-top: 1px solid var(--xobo-border);
-                padding: 0.5rem 0;
-                margin-top: 1rem;
+                padding: 0.2rem 0 !important;
+                margin-top: 0.2rem !important;
                 page-break-inside: avoid;
             }
 
             .footer-bottom {
                 text-align: center;
                 color: var(--xobo-gray) !important;
-                font-size: 14px;
+                font-size: 8px !important;
             }
 
             .footer.hide-for-print {
@@ -953,6 +965,45 @@ $pageTitle = 'Receipt #' . $orderId;
             </table>
         </div>
 
+        <!-- Receiver and Driver Signature Section -->
+        <div class="table-section signature-section" style="padding-top: 1.5rem; padding-bottom: 2.5rem;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;">
+                <!-- Receiver Side -->
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div class="signature-title" style="font-weight: 600; color: var(--xobo-primary); margin-bottom: 1rem; font-size: 1.1rem;">Receiver</div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Name:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                    </div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Date:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 120px; width: 60%; height: 2.2em;"></div>
+                    </div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Signature:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                    </div>
+                </div>
+                <!-- Vertical Divider -->
+                <div class="vertical-divider" style="width: 2px; background: #e0e0e0; height: 140px; align-self: center;"></div>
+                <!-- Driver Side -->
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-start;">
+                    <div class="signature-title" style="font-weight: 600; color: var(--xobo-primary); margin-bottom: 1rem; font-size: 1.1rem;">Driver</div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Name:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                    </div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Date:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 120px; width: 60%; height: 2.2em;"></div>
+                    </div>
+                    <div style="margin-bottom: 1.2rem; width: 100%;">
+                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Signature:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
     </div>
 
