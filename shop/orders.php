@@ -10,7 +10,7 @@ $companyId = $_SESSION['company_id'];
 $success = isset($_GET['success']) ? 'Order placed successfully!' : '';
 
 if (empty($companyId)) {
-    header('Location: /xobo-vision/auth/login.php?error=' . urlencode('You must be associated with a company to view orders.'));
+    header('Location: /xobo-c/auth/login.php?error=' . urlencode('You must be associated with a company to view orders.'));
     exit;
 }
 
@@ -120,7 +120,7 @@ include '../includes/header.php';
                     <i class="fas fa-box-open"></i>
                     <h4>No orders found</h4>
                     <p>No orders have been placed by your company yet.</p>
-                    <a href="/xobo-vision/index.php" class="btn btn-primary">
+                    <a href="/xobo-c/index.php" class="btn btn-primary">
                         <i class="fas fa-shopping-cart"></i> Start Shopping
                     </a>
                 </div>
@@ -155,7 +155,7 @@ include '../includes/header.php';
                                     </div>
                                 </td>
                                 <td class="receipt-col">
-                                    <a href="/xobo-vision/shop/order-receipt.php?order_id=<?php echo $order['id']; ?>" class="btn-receipt-long-narrow">
+                                    <a href="/xobo-c/shop/order-receipt.php?order_id=<?php echo $order['id']; ?>" class="btn-receipt-long-narrow">
                                         <i class="fas fa-eye"></i> View
                                     </a>
                                 </td>

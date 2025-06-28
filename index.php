@@ -5,13 +5,13 @@ require_once 'includes/functions.php';
 
 // Ensure user is logged in
 if (!isLoggedIn()) {
-    header('Location: /xobo-vision/auth/login.php');
+    header('Location: /xobo-c/auth/login.php');
     exit;
 }
 
 // Ensure user has a company
 if (empty($_SESSION['company_id'])) {
-    header('Location: /xobo-vision/auth/login.php');
+    header('Location: /xobo-c/auth/login.php');
     exit;
 }
 
@@ -24,7 +24,7 @@ if (!$company) {
     // Company not found or not approved
     $error = "Your company is not yet approved or has been deactivated. Please contact the administrator.";
     session_destroy();
-    header('Location: /xobo-vision/auth/login.php?error=' . urlencode($error));
+    header('Location: /xobo-c/auth/login.php?error=' . urlencode($error));
     exit;
 }
 
@@ -518,14 +518,14 @@ include 'includes/header.php';
         </div>
         
         <div class="quick-actions">
-            <a href="/xobo-vision/shop/orders.php" class="action-btn">
+            <a href="/xobo-c/shop/orders.php" class="action-btn">
                 <i class="fas fa-list-alt"></i> My Orders
             </a>
             <?php if ($_SESSION['role'] === 'company_admin'): ?>
-                <a href="/xobo-vision/company/products.php" class="action-btn">
+                <a href="/xobo-c/company/products.php" class="action-btn">
                     <i class="fas fa-boxes"></i> Manage Products
                 </a>
-                <a href="/xobo-vision/company/orders.php" class="action-btn">
+                <a href="/xobo-c/company/orders.php" class="action-btn">
                     <i class="fas fa-chart-line"></i> Company Orders
                 </a>
             <?php endif; ?>
@@ -586,7 +586,7 @@ include 'includes/header.php';
                 <h4>No products available yet</h4>
                 <p>Your company's product catalog is empty.</p>
                 <?php if ($_SESSION['role'] === 'company_admin'): ?>
-                    <a href="/xobo-vision/company/products.php" class="btn btn-primary">
+                    <a href="/xobo-c/company/products.php" class="btn btn-primary">
                         <i class="fas fa-plus"></i> Add Products
                     </a>
                 <?php else: ?>

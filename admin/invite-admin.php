@@ -5,7 +5,7 @@ require_once '../includes/functions.php';
 
 // Check if user is admin (first user or super_admin)
 if (!isAdmin($pdo)) {
-    header('Location: /xobo-vision/index.php');
+    header('Location: /xobo-c/index.php');
     exit;
 }
 

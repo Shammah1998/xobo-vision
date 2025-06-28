@@ -10,6 +10,6 @@
         </div>
     </footer>
     
-    <script src="/xobo-vision/assets/js/shop.js"></script>
+    <script src="/xobo-c/assets/js/shop.js"></script>
 </body>
 </html> 

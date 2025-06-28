@@ -5,7 +5,7 @@ require_once '../includes/functions.php';
 
 // Redirect if already logged in
 if (isLoggedIn()) {
-    header('Location: /xobo-vision/index.php');
+    header('Location: /xobo-c/index.php');
     exit;
 }
 

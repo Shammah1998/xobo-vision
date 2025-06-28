@@ -46,22 +46,22 @@ function hasRole($role) {
 // Redirect based on role
 function redirectByRole() {
     if (!isLoggedIn()) {
-        header('Location: /xobo-vision/auth/login.php');
+        header('Location: /xobo-c/auth/login.php');
         exit;
     }
     
     switch ($_SESSION['role']) {
         case 'super_admin':
-            header('Location: /xobo-vision/admin/dashboard.php');
+            header('Location: /xobo-c/admin/dashboard.php');
             break;
         case 'company_admin':
-            header('Location: /xobo-vision/company/products.php');
+            header('Location: /xobo-c/company/products.php');
             break;
         case 'user':
-            header('Location: /xobo-vision/shop/shop.php?cid=' . $_SESSION['company_id']);
+            header('Location: /xobo-c/shop/shop.php?cid=' . $_SESSION['company_id']);
             break;
         default:
-            header('Location: /xobo-vision/auth/login.php');
+            header('Location: /xobo-c/auth/login.php');
     }
     exit;
 }

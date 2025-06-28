@@ -5,7 +5,7 @@ require_once '../includes/functions.php';
 
 // Check if user is admin (first user or super_admin)
 if (!isAdmin($pdo)) {
-    header('Location: /xobo-vision/index.php');
+    header('Location: /xobo-c/index.php');
     exit;
 }
 
@@ -87,7 +87,7 @@ include 'includes/admin_header.php';
         <div class="alert alert-success">
             <?php echo htmlspecialchars($message); ?>
             <div style="margin-top: 1rem;">
-                <a href="/xobo-vision/admin/invite-user.php" 
+                <a href="/xobo-c/admin/invite-user.php" 
                    style="display: inline-block; padding: 8px 16px; background: var(--xobo-primary); color: white; text-decoration: none; border-radius: 4px; font-size: 0.9rem;">
                     <i class="fas fa-user-plus"></i> Invite Users Now
                 </a>
@@ -190,7 +190,7 @@ include 'includes/admin_header.php';
         </div>
 
         <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
-            <a href="/xobo-vision/admin/companies.php" 
+            <a href="/xobo-c/admin/companies.php" 
                style="padding: 12px 24px; background: var(--xobo-gray); color: white; text-decoration: none; border-radius: 4px;">
                 <i class="fas fa-arrow-left"></i> Back to Companies
             </a>
@@ -229,8 +229,6 @@ include 'includes/admin_header.php';
     color: var(--xobo-primary);
     font-weight: 500;
 }
-
-
 
 .alert {
     padding: 12px 16px;
@@ -576,8 +574,6 @@ document.getElementById('import-excel-btn').addEventListener('click', function()
     
     reader.readAsArrayBuffer(file);
 });
-
-
 
 function createProductsTable() {
     return `

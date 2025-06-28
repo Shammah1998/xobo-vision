@@ -5,7 +5,7 @@
 ### Step 1: Database Setup
 ```sql
 1. Open phpMyAdmin
-2. Create new database: "xobo_vision"
+2. Create new database: "xobo-c"
 3. Import "database_schema.sql"
 ```
 
@@ -20,7 +20,7 @@
 ```php
 // Check config/db.php - Update if needed
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'xobo_vision');
+define('DB_NAME', 'xobo-c');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 ```

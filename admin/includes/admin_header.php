@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../config/db.php';
 
 // Ensure user is admin
 if (!isAdmin($pdo)) {
-    header('Location: /xobo-vision/index.php');
+    header('Location: /xobo-c/index.php');
     exit;
 }
 ?>
@@ -18,7 +18,7 @@ if (!isAdmin($pdo)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) : 'Admin Panel - XOBO MART'; ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/xobo-vision/assets/css/style.css">
+    <link rel="stylesheet" href="/xobo-c/assets/css/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
@@ -277,50 +277,50 @@ if (!isAdmin($pdo)) {
             <div class="admin-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Dashboard</div>
-                    <a href="/xobo-vision/admin/dashboard.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard.php' ? 'active' : ''; ?>">
+                    <a href="/xobo-c/admin/dashboard.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard.php' ? 'active' : ''; ?>">
                         <i class="fas fa-tachometer-alt"></i> Overview
                     </a>
                 </div>
 
                 <div class="nav-section">
                     <div class="nav-section-title">Company Management</div>
-                    <a href="/xobo-vision/admin/companies.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'companies.php' ? 'active' : ''; ?>">
+                    <a href="/xobo-c/admin/companies.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'companies.php' ? 'active' : ''; ?>">
                         <i class="fas fa-building"></i> All Companies
                     </a>
-                    <a href="/xobo-vision/admin/create-company.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'create-company.php' ? 'active' : ''; ?>">
+                    <a href="/xobo-c/admin/create-company.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'create-company.php' ? 'active' : ''; ?>">
                         <i class="fas fa-plus-circle"></i> Create Company
                     </a>
                 </div>
 
                 <div class="nav-section">
                     <div class="nav-section-title">User Management</div>
-                    <a href="/xobo-vision/admin/invite-user.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'invite-user.php' ? 'active' : ''; ?>">
+                    <a href="/xobo-c/admin/invite-user.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'invite-user.php' ? 'active' : ''; ?>">
                         <i class="fas fa-user-plus"></i> Invite User
                     </a>
-                    <a href="/xobo-vision/admin/edit-user.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'edit-user.php' ? 'active' : ''; ?>">
+                    <a href="/xobo-c/admin/edit-user.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'edit-user.php' ? 'active' : ''; ?>">
                         <i class="fas fa-user-edit"></i> Edit User
                     </a>
                 </div>
 
                 <div class="nav-section">
                     <div class="nav-section-title">Admin Management</div>
-                    <a href="/xobo-vision/admin/admin-users.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'admin-users.php' ? 'active' : ''; ?>">
+                    <a href="/xobo-c/admin/admin-users.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'admin-users.php' ? 'active' : ''; ?>">
                         <i class="fas fa-users-cog"></i>Admin Users
                     </a>
-                    <a href="/xobo-vision/admin/add-admin.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'add-admin.php' ? 'active' : ''; ?>">
+                    <a href="/xobo-c/admin/add-admin.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'add-admin.php' ? 'active' : ''; ?>">
                         <i class="fas fa-user-plus"></i>Add Sub-Admin
                     </a>
                 </div>
 
                 <div class="nav-section">
                     <div class="nav-section-title">Order Management</div>
-                    <a href="/xobo-vision/admin/orders.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'orders.php' ? 'active' : ''; ?>">
+                    <a href="/xobo-c/admin/orders.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'orders.php' ? 'active' : ''; ?>">
                         <i class="fas fa-box"></i> All Orders
                     </a>
                 </div>
 
                 <div class="nav-section">
-                    <a href="/xobo-vision/auth/logout.php" class="nav-item">
+                    <a href="/xobo-c/auth/logout.php" class="nav-item">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
                 </div>

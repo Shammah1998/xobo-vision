@@ -5,7 +5,7 @@ require_once '../config/db.php';
 require_once '../includes/functions.php';
 
 if (!isAdmin($pdo)) {
-    header('Location: /xobo-vision/index.php');
+    header('Location: /xobo-c/index.php');
     exit;
 }
 

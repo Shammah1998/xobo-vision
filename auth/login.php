@@ -6,9 +6,9 @@ require_once '../includes/functions.php';
 // Redirect if already logged in
 if (isLoggedIn()) {
     if (isAdmin($pdo)) {
-        header('Location: /xobo-vision/admin/dashboard.php');
+        header('Location: /xobo-c/admin/dashboard.php');
     } else {
-        header('Location: /xobo-vision/index.php');
+        header('Location: /xobo-c/index.php');
     }
     exit;
 }
@@ -42,10 +42,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Redirect based on admin status and user role
                     if (isAdmin($pdo)) {
-                        header('Location: /xobo-vision/admin/dashboard.php');
+                        header('Location: /xobo-c/admin/dashboard.php');
                     } else {
                         // Redirect users to company-specific homepage
-                        header('Location: /xobo-vision/index.php');
+                        header('Location: /xobo-c/index.php');
                     }
                     exit;
                 }

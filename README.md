@@ -42,7 +42,7 @@ A complete multi-tenant e-commerce platform built with pure PHP, MySQL, and vani
 
 ### Step 1: Database Setup
 1. Open phpMyAdmin or your MySQL client
-2. Create a new database named `xobo_vision`
+2. Create a new database named `xobo-c`
 3. Import the `database_schema.sql` file to create all tables
 
 ### Step 2: Configuration
@@ -50,7 +50,7 @@ A complete multi-tenant e-commerce platform built with pure PHP, MySQL, and vani
 2. Update database credentials in `config/db.php` if needed:
    ```php
    define('DB_HOST', 'localhost');
-   define('DB_NAME', 'xobo_vision');
+   define('DB_NAME', 'xobo-c');
    define('DB_USER', 'root');
    define('DB_PASS', '');
    ```

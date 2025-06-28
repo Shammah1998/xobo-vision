@@ -222,7 +222,7 @@ if ($orderIds) {
                                             <!-- Remove the old driver label from below the buttons -->
                                         <?php endif; ?>
                                     </form>
-                                    <a href="/xobo-vision/shop/order-receipt.php?order_id=<?php echo $order['id']; ?>" class="btn btn-primary btn-sm align-btns" style="width: 140px; height: 40px; text-align: center; display: flex; align-items: center; justify-content: center;">
+                                    <a href="/xobo-c/shop/order-receipt.php?order_id=<?php echo $order['id']; ?>" class="btn btn-primary btn-sm align-btns" style="width: 140px; height: 40px; text-align: center; display: flex; align-items: center; justify-content: center;">
                                         <span style="display: flex; align-items: center; justify-content: center; width: 100%;">
                                             <i class="fas fa-eye" style="margin-right: 0.4em;"></i>
                                             <span>View Receipt</span>

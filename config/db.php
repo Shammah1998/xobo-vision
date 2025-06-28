@@ -1,7 +1,7 @@
 <?php
 // Database configuration
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'xobo_vision');
+define('DB_NAME', 'xobo-c');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 
