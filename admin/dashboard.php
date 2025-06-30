@@ -38,7 +38,7 @@ $pendingCompanies = $stmt->fetch()['pending_companies'];
 $stmt = $pdo->query("SELECT COUNT(*) as approved_companies FROM companies WHERE status = 'approved'");
 $approvedCompanies = $stmt->fetch()['approved_companies'];
 
-$stmt = $pdo->query("SELECT COUNT(*) as total_users FROM users WHERE role != 'super_admin'");
+$stmt = $pdo->query("SELECT COUNT(*) as total_users FROM users");
 $totalUsers = $stmt->fetch()['total_users'];
 
 // Get recent companies
