@@ -239,6 +239,25 @@ $pageTitle = 'Receipt #' . $orderId;
             color: var(--xobo-gray);
             border-top: 1px solid var(--xobo-border);
         }
+        @media print {
+            body, html {
+                width: 210mm;
+                height: 297mm;
+                margin: 0;
+                padding: 0;
+            }
+            .receipt-container {
+                width: 100%;
+                max-width: 800px;
+                margin: 0 auto;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .table-section, .order-info-line, .receipt-header {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
     </style>
 </head>
 <body>
@@ -388,15 +407,26 @@ $pageTitle = 'Receipt #' . $orderId;
             button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
             button.disabled = true;
 
+            // Always scale to fit A4 page (1122px at 96dpi)
+            const a4HeightPx = 1122;
+            const originalTransform = element.style.transform;
+            const originalTransformOrigin = element.style.transformOrigin;
+            const scale = a4HeightPx / element.offsetHeight;
+            element.style.transform = `scale(${scale})`;
+            element.style.transformOrigin = 'top center';
+
             const opt = {
-                margin: 0.5,
-                filename: 'Receipt_<?php echo $orderId; ?>.pdf',
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                margin:       0,
+                filename:     'Receipt_<?php echo $orderId; ?>.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             html2pdf().set(opt).from(element).save().then(() => {
+                // Restore original transform after PDF generation
+                element.style.transform = originalTransform;
+                element.style.transformOrigin = originalTransformOrigin;
                 button.innerHTML = '<i class="fas fa-download"></i> Download PDF';
                 button.disabled = false;
             });
