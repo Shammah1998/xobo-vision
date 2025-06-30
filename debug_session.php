@@ -74,10 +74,10 @@ require_once 'includes/functions.php';
 
         <div class="test-login">
             <h3>Quick Actions:</h3>
-            <a href="auth/login.php">🔑 Go to Login</a>
-            <a href="index.php">🏠 Back to Home</a>
+            <a href="auth/login">🔑 Go to Login</a>
+            <a href="index">🏠 Back to Home</a>
             <?php if (isLoggedIn()): ?>
-                <a href="auth/logout.php">🚪 Logout</a>
+                <a href="auth/logout">🚪 Logout</a>
             <?php endif; ?>
         </div>
 

@@ -6,7 +6,7 @@ require_once '../config/db.php';
 
 // Redirect if already logged in
 if (isLoggedIn()) {
-    header('Location: ' . BASE_URL . '/index.php');
+    header('Location: ' . BASE_URL . '/index');
     exit;
 }
 
@@ -260,7 +260,7 @@ include '../includes/header.php';
     </div>
 
     <div class="register-links">
-        <p>Already have an account? <a href="login.php">Sign In</a></p>
+        <p>Already have an account? <a href="login">Sign In</a></p>
     </div>
 </div>
 

@@ -161,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->commit();
                 
                 // Redirect to receipt page
-                header("Location: order-receipt.php?order_id=" . $orderId);
+                header("Location: order-receipt?order_id=" . $orderId);
                 exit;
                 
             } catch (Exception $e) {
@@ -901,7 +901,7 @@ include '../includes/header.php';
             <i class="fas fa-shopping-cart"></i>
             <h3>Your cart is empty</h3>
             <p>Browse your company's catalog and add products to your cart!</p>
-            <a href="../index.php" class="btn btn-primary">
+            <a href="../index" class="btn btn-primary">
                 <i class="fas fa-box-open"></i> Browse Catalog
             </a>
         </div>
@@ -1097,7 +1097,7 @@ include '../includes/header.php';
                             </select>
                         </div>
                         <div style="display: flex; gap: 1rem;">
-                            <a href="../index.php" class="btn btn-secondary">
+                            <a href="../index" class="btn btn-secondary">
                                 <i class="fas fa-home"></i> Home
                             </a>
                             <button type="submit" name="confirm_order" id="confirm-order-btn" class="btn btn-primary">
@@ -1129,7 +1129,7 @@ function updateQuantity(productId, change) {
     updateLineTotalAndCart(productId, newValue);
     
     // AJAX update session
-    fetch('cart.php', {
+    fetch('cart', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `ajax=update_quantity&product_id=${productId}&quantity=${newValue}`

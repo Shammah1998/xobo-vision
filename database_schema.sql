@@ -5,7 +5,7 @@ CREATE TABLE companies (
   id           INT AUTO_INCREMENT PRIMARY KEY,
   name         VARCHAR(255) UNIQUE NOT NULL,
   status       ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at   DATETIME NOT NULL
 );
 
 -- Users (super_admin, company_admin, user)
@@ -15,7 +15,7 @@ CREATE TABLE users (
   email        VARCHAR(255) UNIQUE NOT NULL,
   password     VARCHAR(255) NOT NULL,
   role         ENUM('super_admin','company_admin','admin','user') NOT NULL,
-  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at   DATETIME NOT NULL,
   FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE SET NULL
 );
 
@@ -27,7 +27,7 @@ CREATE TABLE products (
   sku          VARCHAR(100) NOT NULL,
   weight_kg    DECIMAL(5,2) NOT NULL,
   rate_ksh     DECIMAL(10,2) NOT NULL,
-  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at   DATETIME NOT NULL,
   FOREIGN KEY (company_id) REFERENCES companies(id)
 );
 
@@ -38,7 +38,7 @@ CREATE TABLE orders (
   company_id   INT NULL,
   total_ksh    DECIMAL(12,2) NOT NULL,
   address      TEXT,
-  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at   DATETIME NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE SET NULL
 );
@@ -59,7 +59,7 @@ CREATE TABLE cart_items (
   user_id      INT NOT NULL,
   product_id   INT NOT NULL,
   quantity     INT NOT NULL,
-  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at   DATETIME NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (product_id) REFERENCES products(id),
   UNIQUE KEY unique_user_product (user_id, product_id)
@@ -76,8 +76,8 @@ CREATE TABLE delivery_details (
   company_address   TEXT NULL,
   recipient_name    VARCHAR(255) NULL,
   recipient_phone   VARCHAR(20) NULL,
-  created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  created_at        DATETIME NOT NULL,
+  updated_at        DATETIME NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id),
   FOREIGN KEY (product_id) REFERENCES products(id),
   UNIQUE KEY unique_user_product_session (user_id, product_id, session_id)
@@ -93,7 +93,7 @@ CREATE TABLE order_delivery_details (
   company_address   TEXT NULL,
   recipient_name    VARCHAR(255) NULL,
   recipient_phone   VARCHAR(20) NULL,
-  created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at        DATETIME NOT NULL,
   FOREIGN KEY (order_id) REFERENCES orders(id),
   FOREIGN KEY (product_id) REFERENCES products(id),
   UNIQUE KEY unique_order_product (order_id, product_id)
@@ -104,7 +104,7 @@ CREATE TABLE drivers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
   driver_name VARCHAR(255) NOT NULL,
-  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  assigned_at DATETIME NOT NULL,
   FOREIGN KEY (order_id) REFERENCES orders(id)
 );
 
@@ -113,7 +113,7 @@ CREATE TABLE order_vehicle_types (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
   vehicle_type VARCHAR(32) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME NOT NULL,
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 

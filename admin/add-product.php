@@ -26,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($name && $sku && $weight > 0 && $price > 0) {
         $stmt = $pdo->prepare('INSERT INTO products (company_id, name, sku, weight_kg, rate_ksh) VALUES (?, ?, ?, ?, ?)');
         if ($stmt->execute([$companyId, $name, $sku, $weight, $price])) {
-            header('Location: company-products.php?company_id=' . $companyId . '&msg=added');
+            header("Location: company-products?company_id=$companyId");
             exit;
         } else {
             $error = 'Failed to add product.';

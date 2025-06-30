@@ -222,7 +222,7 @@ document.head.appendChild(style);
 
 // Cart update functionality
 function updateCartDisplay() {
-    const cartLinks = document.querySelectorAll('a[href*="cart.php"]');
+    const cartLinks = document.querySelectorAll('a[href*="cart"]');
     // This would be enhanced with actual cart count if using AJAX
 }
 

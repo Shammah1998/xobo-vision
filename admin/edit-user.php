@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user_id'])) {
         <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search by email or company..." style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px; min-width: 250px;">
         <button type="submit" class="btn btn-primary">Search</button>
         <?php if ($search): ?>
-            <a href="edit-user.php" class="btn btn-secondary">Clear</a>
+            <a href="edit-user" class="btn btn-secondary">Clear</a>
         <?php endif; ?>
     </form>
     <table class="data-table" style="width:100%;">

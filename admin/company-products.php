@@ -5,7 +5,7 @@ require_once '../config/db.php';
 require_once '../includes/functions.php';
 
 if (!isAdmin($pdo)) {
-    header('Location: /xobo-c/index.php');
+    header('Location: /xobo-c/index');
     exit;
 }
 
@@ -55,7 +55,7 @@ include 'includes/admin_header.php';
     <?php if ($error): ?>
         <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
     <?php endif; ?>
-    <a href="add-product.php?company_id=<?php echo $companyId; ?>" class="btn btn-primary" style="margin-bottom: 1.2rem;">
+    <a href="add-product?company_id=<?php echo $companyId; ?>" class="btn btn-primary" style="margin-bottom: 1.2rem;">
         <i class="fas fa-plus"></i> Add Product
     </a>
     <table class="data-table" style="width:100%;">
@@ -78,7 +78,7 @@ include 'includes/admin_header.php';
                 <td style="padding:0.5rem; text-align:right;"><?php echo htmlspecialchars($product['weight_kg']); ?></td>
                 <td style="padding:0.5rem; text-align:right;"><?php echo number_format($product['rate_ksh'], 2); ?></td>
                 <td style="padding:0.5rem; text-align:center;">
-                    <a href="edit-product.php?product_id=<?php echo $product['id']; ?>&company_id=<?php echo $companyId; ?>" class="btn btn-primary btn-sm" title="Edit Product" style="padding: 0.4rem 0.7rem; min-width: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                    <a href="edit-product?product_id=<?php echo $product['id']; ?>&company_id=<?php echo $companyId; ?>" class="btn btn-primary btn-sm" title="Edit Product" style="padding: 0.4rem 0.7rem; min-width: 32px; display: inline-flex; align-items: center; justify-content: center;">
                         <i class="fas fa-pen"></i>
                     </a>
                     <form method="POST" style="display:inline-block; margin:0;" onsubmit="return confirm('Delete this product?');">

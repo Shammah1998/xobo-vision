@@ -1,4 +1,6 @@
+Options -MultiViews
 RewriteEngine On
+RewriteBase /xobo-c/
 
 # For subdomain root, no RewriteBase needed (or use /)
 # RewriteBase /
@@ -9,10 +11,14 @@ RewriteEngine On
 
 # Remove trailing slashes
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)/$ /$1 [L,R=301]
+RewriteRule ^(.*)/$ $1 [L,R=301]
+
+# Redirect /index to /products, then internally serve index.php for /products
+RewriteRule ^index/?$ products [R=301,L]
+RewriteRule ^products/?$ index.php [L]
 
 # Handle 404 errors
-ErrorDocument 404 /index.php
+ErrorDocument 404 /xobo-c/404
 
 # Security headers
 <IfModule mod_headers.c>
@@ -45,4 +51,16 @@ ErrorDocument 404 /index.php
     AddOutputFilterByType DEFLATE application/rss+xml
     AddOutputFilterByType DEFLATE application/javascript
     AddOutputFilterByType DEFLATE application/x-javascript
-</IfModule> 
+</IfModule>
+
+# If the request is for a file or directory that exists, serve it as is
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# If the request does not contain a file extension and a .php file exists, rewrite to .php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]{2,4}$
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.*)$ $1.php [L] 

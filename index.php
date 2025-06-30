@@ -6,13 +6,13 @@ require_once 'config/db.php';
 
 // Ensure user is logged in
 if (!isLoggedIn()) {
-    header('Location: ' . BASE_URL . '/auth/login.php');
+    header('Location: ' . BASE_URL . '/auth/login');
     exit;
 }
 
 // Ensure user has a company
 if (empty($_SESSION['company_id'])) {
-    header('Location: ' . BASE_URL . '/auth/login.php');
+    header('Location: ' . BASE_URL . '/auth/login');
     exit;
 }
 
@@ -25,7 +25,7 @@ if (!$company) {
     // Company not found or not approved
     $error = "Your company is not yet approved or has been deactivated. Please contact the administrator.";
     session_destroy();
-    header('Location: ' . BASE_URL . '/auth/login.php?error=' . urlencode($error));
+    header('Location: ' . BASE_URL . '/auth/login?error=' . urlencode($error));
     exit;
 }
 
@@ -519,14 +519,14 @@ include 'includes/header.php';
         </div>
         
         <div class="quick-actions">
-            <a href="<?php echo BASE_URL; ?>/shop/orders.php" class="action-btn">
+            <a href="<?php echo BASE_URL; ?>/shop/orders" class="action-btn">
                 <i class="fas fa-list-alt"></i> My Orders
             </a>
             <?php if ($_SESSION['role'] === 'company_admin'): ?>
-                <a href="<?php echo BASE_URL; ?>/company/products.php" class="action-btn">
+                <a href="<?php echo BASE_URL; ?>/company/products" class="action-btn">
                     <i class="fas fa-boxes"></i> Manage Products
                 </a>
-                <a href="<?php echo BASE_URL; ?>/company/orders.php" class="action-btn">
+                <a href="<?php echo BASE_URL; ?>/company/orders" class="action-btn">
                     <i class="fas fa-chart-line"></i> Company Orders
                 </a>
             <?php endif; ?>
@@ -587,7 +587,7 @@ include 'includes/header.php';
                 <h4>No products available yet</h4>
                 <p>Your company's product catalog is empty.</p>
                 <?php if ($_SESSION['role'] === 'company_admin'): ?>
-                    <a href="<?php echo BASE_URL; ?>/company/products.php" class="btn btn-primary">
+                    <a href="<?php echo BASE_URL; ?>/company/products" class="btn btn-primary">
                         <i class="fas fa-plus"></i> Add Products
                     </a>
                 <?php else: ?>
@@ -803,7 +803,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Create form and submit to cart
             const form = document.createElement('form');
             form.method = 'POST';
-            form.action = 'shop/cart.php';
+            form.action = 'shop/cart';
             
             selectedProducts.forEach(product => {
                 const input = document.createElement('input');

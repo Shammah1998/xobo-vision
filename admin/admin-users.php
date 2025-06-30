@@ -83,7 +83,7 @@ $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <input type="text" name="search" value="<?php echo htmlspecialchars($search); ?>" placeholder="Search by email..." style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px; min-width: 250px;">
         <button type="submit" class="btn btn-primary">Search</button>
         <?php if ($search): ?>
-            <a href="admin-users.php" class="btn btn-secondary">Clear</a>
+            <a href="admin-users" class="btn btn-secondary">Clear</a>
         <?php endif; ?>
     </form>
     <div class="table-container">
@@ -114,7 +114,7 @@ $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <?php elseif ($row['id'] == 1): ?>
                                     <span style="color: var(--xobo-gray); font-size: 0.8rem; display: inline-block;">Founder</span>
                                 <?php else: ?>
-                                    <a href="edit-admin.php?id=<?php echo $row['id']; ?>" class="btn btn-primary btn-sm" title="Edit Admin" style="padding: 0.4rem 0.7rem; min-width: 32px; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-pen"></i></a>
+                                    <a href="edit-admin?id=<?php echo $row['id']; ?>" class="btn btn-primary btn-sm" title="Edit Admin" style="padding: 0.4rem 0.7rem; min-width: 32px; display: inline-flex; align-items: center; justify-content: center;"><i class="fas fa-pen"></i></a>
                                     <form method="POST" style="display:inline-block; margin:0;">
                                         <input type="hidden" name="delete_admin_id" value="<?php echo $row['id']; ?>">
                                         <button type="submit" class="delete-btn" title="Delete Admin User" style="margin: 0 auto; display: flex; align-items: center; justify-content: center;">
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.querySelector('td').innerHTML = '';
             });
             // Fetch the edit form via AJAX
-            fetch('ajax-edit-user.php?id=' + adminId + '&role=super_admin')
+            fetch('ajax-edit-user?id=' + adminId + '&role=super_admin')
                 .then(response => response.text())
                 .then(html => {
                     editRow.querySelector('td').innerHTML = html;

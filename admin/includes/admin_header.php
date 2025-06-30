@@ -285,37 +285,37 @@ if (!isAdmin($pdo)) {
 
                 <div class="nav-section">
                     <div class="nav-section-title">Company Management</div>
-                    <a href="<?php echo BASE_URL; ?>/admin/companies.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'companies.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/admin/companies" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'companies.php' ? 'active' : ''; ?>">
                         <i class="fas fa-building"></i> All Companies
                     </a>
-                    <a href="<?php echo BASE_URL; ?>/admin/create-company.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'create-company.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/admin/create-company" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'create-company.php' ? 'active' : ''; ?>">
                         <i class="fas fa-plus-circle"></i> Create Company
                     </a>
                 </div>
 
                 <div class="nav-section">
                     <div class="nav-section-title">User Management</div>
-                    <a href="<?php echo BASE_URL; ?>/admin/invite-user.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'invite-user.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/admin/invite-user" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'invite-user.php' ? 'active' : ''; ?>">
                         <i class="fas fa-user-plus"></i> Invite User
                     </a>
-                    <a href="<?php echo BASE_URL; ?>/admin/edit-user.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'edit-user.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/admin/edit-user" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'edit-user.php' ? 'active' : ''; ?>">
                         <i class="fas fa-user-edit"></i> Edit User
                     </a>
                 </div>
 
                 <div class="nav-section">
                     <div class="nav-section-title">Admin Management</div>
-                    <a href="<?php echo BASE_URL; ?>/admin/admin-users.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'admin-users.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/admin/admin-users" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'admin-users.php' ? 'active' : ''; ?>">
                         <i class="fas fa-users-cog"></i>Admin Users
                     </a>
-                    <a href="<?php echo BASE_URL; ?>/admin/add-admin.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'add-admin.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/admin/add-admin" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'add-admin.php' ? 'active' : ''; ?>">
                         <i class="fas fa-user-plus"></i>Add Sub-Admin
                     </a>
                 </div>
 
                 <div class="nav-section">
                     <div class="nav-section-title">Order Management</div>
-                    <a href="<?php echo BASE_URL; ?>/admin/orders.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'orders.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/admin/orders" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'orders.php' ? 'active' : ''; ?>">
                         <i class="fas fa-box"></i> All Orders
                     </a>
                 </div>

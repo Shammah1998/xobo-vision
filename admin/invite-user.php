@@ -6,7 +6,7 @@ require_once '../config/db.php';
 
 // Check if user is admin (first user or super_admin)
 if (!isAdmin($pdo)) {
-    header('Location: ' . BASE_URL . '/index.php');
+    header('Location: ' . BASE_URL . '/index');
     exit;
 }
 
@@ -105,7 +105,9 @@ include 'includes/admin_header.php';
         <div style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 4px; margin-bottom: 2rem;">
             <i class="fas fa-exclamation-triangle"></i> 
             <strong>No approved companies found.</strong> 
-            You need to <a href="<?php echo BASE_URL; ?>/admin/create-company.php" style="color: var(--xobo-primary);">create a company</a> first before inviting users.
+            <div class="alert alert-info" style="margin-top: 2rem;">
+                You need to <a href="<?php echo BASE_URL; ?>/admin/create-company" style="color: var(--xobo-primary);">create a company</a> first before inviting users.
+            </div>
         </div>
     <?php else: ?>
     
@@ -147,7 +149,7 @@ include 'includes/admin_header.php';
         </div>
 
         <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
-            <a href="<?php echo BASE_URL; ?>/admin/dashboard.php" 
+            <a href="<?php echo BASE_URL; ?>/admin/dashboard" 
                style="padding: 12px 24px; background: var(--xobo-gray); color: white; text-decoration: none; border-radius: 4px;">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>

@@ -11,9 +11,34 @@ $userId = $_SESSION['user_id'];
 $companyId = $_SESSION['company_id'];
 $role = $_SESSION['role'] ?? '';
 
+// Get the referer URL
+$referer = $_SERVER['HTTP_REFERER'] ?? '';
+
+// Determine the button URL and text based on role and referer
+$buttonUrl = '../index';  // Default URL for regular users
+$buttonText = '<i class="fas fa-home"></i> Home';
+$buttonClass = 'home-button';
+
+if (isAdmin($pdo) || $role === 'company_admin') {
+    $buttonUrl = '../admin/orders';
+    $buttonText = '<i class="fas fa-arrow-left"></i> Back to Orders';
+    $buttonClass = 'back-button';
+} else if (strpos($referer, 'shop/orders') !== false) {
+    // If user came from the user orders page
+    $buttonUrl = 'orders';
+    $buttonText = '<i class="fas fa-arrow-left"></i> Back to Orders';
+    $buttonClass = 'back-button';
+}
+
+// Determine the home URL based on role and referrer
+$homeUrl = '../index';  // Default URL for regular users
+if (isAdmin($pdo) || $role === 'company_admin') {
+    $homeUrl = '../admin/dashboard';
+}
+
 global $pdo;
 if (!$orderId) {
-    header('Location: ../index.php');
+    header('Location: ../index');
     exit;
 }
 
@@ -36,7 +61,7 @@ if (isAdmin($pdo) || $role === 'company_admin') {
 $order = $stmt->fetch();
 
 if (!$order) {
-    header('Location: ../index.php');
+    header('Location: ../index');
     exit;
 }
 
@@ -69,16 +94,14 @@ foreach ($orderItems as $item) {
 
 $pageTitle = 'Receipt #' . $orderId;
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $pageTitle; ?></title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
-        /* XOBO Vision Color Variables */
         :root {
             --xobo-primary: #16234d;
             --xobo-primary-hover: #1a2654;
@@ -86,30 +109,18 @@ $pageTitle = 'Receipt #' . $orderId;
             --xobo-gray: #666666;
             --xobo-border: #ddd;
             --xobo-shadow: rgba(0, 0, 0, 0.1);
-            --xobo-accent: #e53935;
-            --xobo-success: #27ae60;
-            --xobo-warning: #f39c12;
             --text-primary: #333;
             --text-secondary: #666;
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: var(--xobo-light-gray);
             color: var(--text-primary);
             line-height: 1.5;
             font-size: 14px;
-            margin: 0;
-            padding-top: 45px; /* Space for fixed navbar */
+            padding-top: 60px;
         }
-
-        /* Navbar Styles */
         .navbar {
             position: fixed;
             top: 0;
@@ -119,38 +130,29 @@ $pageTitle = 'Receipt #' . $orderId;
             border-bottom: 2px solid var(--xobo-border);
             padding: 0.6rem 2rem;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
             z-index: 1000;
             box-shadow: 0 2px 4px var(--xobo-shadow);
             height: 55px;
         }
-
-        .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--xobo-primary);
-            text-decoration: none;
-            letter-spacing: 0.05em;
-        }
-
-        .navbar-brand img {
-            width: 5vw;
-            height: auto;
-            object-fit: contain;
-            transition: transform 0.3s ease;
-        }
-
-        .navbar-brand img:hover {
-            transform: scale(1.05);
-        }
-
-        .navbar-actions {
+        .navbar-brand { display: flex; align-items: center; }
+        .navbar-brand img { height: 90px; width: auto; object-fit: contain; }
+        .navbar-actions { display: flex; gap: 1rem; align-items: center; }
+        .navbar-btn-primary {
+            background: var(--xobo-primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
             display: flex;
-            gap: 1rem;
             align-items: center;
+            gap: 0.5rem;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
         }
-
+        .navbar-btn-primary:hover { background: var(--xobo-primary-hover); }
         .receipt-container {
             max-width: 800px;
             margin: 2rem auto;
@@ -159,59 +161,27 @@ $pageTitle = 'Receipt #' . $orderId;
             border-radius: 8px;
             overflow: hidden;
         }
-
-        /* Header */
         .receipt-header {
             background: var(--xobo-primary);
             color: white;
-            padding: 1.5rem 2rem;
+            padding: 0 2rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 2px solid var(--xobo-border);
+            position: relative;
         }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            flex: 1;
-        }
-
-        .company-name {
-            font-size: 1.3rem;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-        }
-
-        .company-name img {
-            width: 4vw;
-            height: auto;
-            object-fit: contain;
-            filter: brightness(0) invert(1);
-        }
-
-        .header-center {
-            flex: 1;
-            text-align: center;
-        }
-
         .receipt-title {
-            font-size: 1.8rem;
+            font-size: 1.3rem;
             font-weight: 600;
-            margin: 0;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
         }
-
-        .header-right {
-            flex: 1;
-            text-align: right;
-        }
-
         .receipt-date {
             font-size: 1rem;
             font-weight: 500;
             opacity: 0.9;
         }
-
         .order-info-line {
             background: var(--xobo-light-gray);
             padding: 0.75rem 2rem;
@@ -220,17 +190,8 @@ $pageTitle = 'Receipt #' . $orderId;
             font-size: 0.9rem;
             border-bottom: 1px solid var(--xobo-border);
         }
-
-        /* Table Section */
-        .table-section {
-            padding: 2rem;
-            border-bottom: 1px solid var(--xobo-border);
-        }
-
-        .table-section:last-of-type {
-            border-bottom: none;
-        }
-
+        .table-section { padding: 2rem; border-bottom: 1px solid var(--xobo-border); }
+        .table-section:last-of-type { border-bottom: none; }
         .section-title {
             font-size: 1.2rem;
             font-weight: 600;
@@ -240,8 +201,6 @@ $pageTitle = 'Receipt #' . $orderId;
             align-items: center;
             gap: 0.5rem;
         }
-
-        /* Tables */
         .data-table {
             width: 100%;
             border-collapse: collapse;
@@ -249,640 +208,65 @@ $pageTitle = 'Receipt #' . $orderId;
             border-radius: 6px;
             overflow: hidden;
         }
-
         .data-table th {
             background: var(--xobo-light-gray);
             padding: 0.75rem;
             text-align: left;
             font-weight: 600;
             color: var(--xobo-primary);
-            border-bottom: 1px solid var(--xobo-border);
-            font-size: 0.9rem;
         }
-
-        .data-table td {
-            padding: 0.75rem;
-            border-bottom: 1px solid #eee;
-            vertical-align: top;
-        }
-
-        .data-table tbody tr:last-child td {
-            border-bottom: none;
-        }
-
-        .data-table tbody tr:hover {
-            background: #fafbfc;
-        }
-
-        /* Product Table Specific */
-        .product-name {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
+        .data-table td { padding: 0.75rem; border-bottom: 1px solid #eee; }
+        .data-table tbody tr:last-child td { border-bottom: none; }
+        .product-name { font-weight: 600; }
         .product-sku {
             font-family: monospace;
             background: var(--xobo-light-gray);
             padding: 0.2rem 0.4rem;
             border-radius: 3px;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
         }
-
-        .quantity, .weight, .price, .total {
-            text-align: right;
-            font-weight: 500;
-        }
-
-        .total {
-            color: var(--xobo-primary);
+        .totals-table { width: 400px; margin-left: auto; }
+        .signature-title {
+            font-size: 1.2rem;
             font-weight: 600;
-        }
-
-        /* Delivery Table Specific */
-        .delivery-label {
-            font-weight: 600;
-            color: var(--text-secondary);
-            width: 150px;
-        }
-
-        .delivery-value {
-            color: var(--text-primary);
-        }
-
-        /* Totals Table Specific */
-        .totals-table {
-            width: 400px;
-            margin-left: auto;
-        }
-
-        .totals-table td {
-            padding: 0.5rem 0.75rem;
-        }
-
-        .totals-label {
-            font-weight: 500;
-            color: var(--text-secondary);
-        }
-
-        .totals-value {
-            text-align: right;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .grand-total-row {
-            background: var(--xobo-light-gray);
-            border-top: 2px solid var(--xobo-border);
-        }
-
-        .grand-total-row .totals-label {
-            font-weight: 700;
             color: var(--xobo-primary);
-            font-size: 1.1rem;
-        }
-
-        .grand-total-row .totals-value {
-            font-weight: 700;
-            color: var(--xobo-primary);
-            font-size: 1.1rem;
-        }
-
-        /* Navbar Button Styles */
-        .navbar-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 4px;
-            text-decoration: none;
-            font-weight: 500;
-            font-size: 0.85rem;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-
-        .navbar-btn-primary {
-            background: var(--xobo-primary);
-            color: white;
-        }
-
-        .navbar-btn-primary:hover {
-            background: var(--xobo-primary-hover);
-        }
-
-        .navbar-btn-secondary {
-            background: var(--xobo-gray);
-            color: white;
-        }
-
-        .navbar-btn-secondary:hover {
-            background: #5a6268;
-        }
-
-        /* Print Styles */
-        @media print {
-            @page {
-                margin: 0.2in 0.2in;
-                size: A4;
-            }
-            
-            * {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-
-            body {
-                background: white !important;
-                font-size: 9px !important;
-                padding-top: 0 !important;
-                margin: 0 !important;
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                line-height: 1.2 !important;
-            }
-            
-            .navbar {
-                display: none !important;
-            }
-            
-            .receipt-container {
-                box-shadow: none;
-                margin: 0 auto !important;
-                max-width: 650px !important;
-                border-radius: 0;
-                overflow: visible;
-                background: white;
-                page-break-inside: avoid !important;
-                padding-bottom: 0 !important;
-            }
-            
-            .receipt-header {
-                background: var(--xobo-primary) !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                padding: 0.5rem 0.8rem !important;
-                display: flex !important;
-                flex-direction: row !important;
-                align-items: center !important;
-                justify-content: space-between !important;
-                border-bottom: 1px solid var(--xobo-border);
-                width: 100%;
-                box-sizing: border-box;
-                gap: 0 !important;
-                text-align: left !important;
-            }
-
-            .header-left, .header-center, .header-right {
-                flex: 1 !important;
-            }
-
-            .header-center {
-                text-align: center !important;
-            }
-
-            .header-right {
-                text-align: right !important;
-            }
-
-            .company-name {
-                font-size: 0.9rem !important;
-                font-weight: 700;
-                letter-spacing: 0.05em;
-            }
-
-            .company-name svg {
-                width: 60px !important;
-                height: 24px !important;
-            }
-
-            .receipt-title {
-                font-size: 1.2rem !important;
-                font-weight: 600;
-                margin: 0;
-                color: white;
-            }
-
-            .receipt-date {
-                font-size: 0.8rem !important;
-                font-weight: 500;
-                color: white;
-                opacity: 0.9;
-            }
-
-            .order-info-line {
-                background: var(--xobo-light-gray) !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                padding: 0.2rem 0.8rem !important;
-                text-align: center;
-                color: var(--text-secondary);
-                font-size: 0.7rem !important;
-                border-bottom: 1px solid var(--xobo-border);
-            }
-
-            .table-section {
-                padding: 0.3rem 0.8rem !important;
-                border-bottom: 1px solid var(--xobo-border);
-                background: white;
-                page-break-inside: avoid;
-                margin-bottom: 0 !important;
-            }
-
-            .table-section:last-of-type {
-                border-bottom: none;
-            }
-
-            .section-title {
-                font-size: 0.8rem !important;
-                font-weight: 600;
-                color: var(--xobo-primary);
-                margin-bottom: 0.2rem !important;
-                display: flex;
-                align-items: center;
-                gap: 0.3rem;
-            }
-
-            .data-table {
-                width: 100%;
-                border-collapse: collapse;
-                border: 1px solid var(--xobo-border);
-                border-radius: 3px;
-                overflow: hidden;
-                background: white;
-            }
-
-            .data-table th {
-                background: var(--xobo-light-gray) !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                padding: 0.2rem 0.3rem !important;
-                text-align: left;
-                font-weight: 600;
-                color: var(--xobo-primary) !important;
-                border-bottom: 1px solid var(--xobo-border);
-                font-size: 0.75em !important;
-            }
-            
-            .data-table td {
-                padding: 0.2rem 0.3rem !important;
-                border-bottom: 1px solid #eee;
-                vertical-align: top;
-                font-size: 0.8em !important;
-            }
-
-            .data-table tbody tr:last-child td {
-                border-bottom: none;
-            }
-
-            .data-table tbody tr:hover {
-                background: transparent;
-            }
-
-            .product-name {
-                font-weight: 600;
-                color: var(--text-primary);
-            }
-
-            .product-sku {
-                font-family: monospace;
-                background: var(--xobo-light-gray) !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                padding: 0.1rem 0.2rem;
-                border-radius: 2px;
-                font-size: 0.7rem;
-                color: var(--text-secondary);
-            }
-
-            .quantity, .weight, .price, .total {
-                text-align: right;
-                font-weight: 500;
-            }
-
-            .total {
-                color: var(--xobo-primary) !important;
-                font-weight: 600;
-            }
-
-            .delivery-label {
-                font-weight: 600;
-                color: var(--text-secondary);
-                width: 120px;
-            }
-
-            .delivery-value {
-                color: var(--text-primary);
-            }
-
-            .totals-table {
-                width: 200px !important;
-                margin-left: auto;
-            }
-
-            .totals-table td {
-                padding: 0.15rem 0.3rem !important;
-                font-size: 0.8em !important;
-            }
-
-            .totals-label {
-                font-weight: 500;
-                color: var(--text-secondary);
-            }
-
-            .totals-value {
-                text-align: right;
-                font-weight: 600;
-                color: var(--text-primary);
-            }
-
-            .grand-total-row {
-                background: var(--xobo-light-gray) !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                border-top: 1px solid var(--xobo-border);
-            }
-
-            .grand-total-row .totals-label {
-                font-weight: 700;
-                color: var(--xobo-primary) !important;
-                font-size: 0.85em !important;
-            }
-
-            .grand-total-row .totals-value {
-                font-weight: 700;
-                color: var(--xobo-primary) !important;
-                font-size: 0.85em !important;
-            }
-
-            /* Signature section: ultra-compact */
-            .table-section.signature-section {
-                padding-top: 0.2rem !important;
-                padding-bottom: 0.2rem !important;
-            }
-            
-            .table-section.signature-section .signature-title {
-                font-size: 0.7rem !important;
-                margin-bottom: 0.2rem !important;
-            }
-            
-            .table-section.signature-section .vertical-divider {
-                height: 40px !important;
-            }
-            
-            .table-section.signature-section div[style*='border-bottom'] {
-                height: 0.8em !important;
-                min-width: 60px !important;
-                width: 40% !important;
-            }
-            
-            .table-section.signature-section label {
-                font-size: 0.6rem !important;
-            }
-            
-            .table-section.signature-section > div[style*='display: flex'] > div {
-                margin-bottom: 0.15rem !important;
-            }
-
-            /* Footer */
-            .footer {
-                background: white !important;
-                border-top: 1px solid var(--xobo-border);
-                padding: 0.2rem 0 !important;
-                margin-top: 0.2rem !important;
-                page-break-inside: avoid;
-            }
-
-            .footer-bottom {
-                text-align: center;
-                color: var(--xobo-gray) !important;
-                font-size: 8px !important;
-            }
-
-            .footer.hide-for-print {
-                display: none !important;
-            }
-        }
-
-        /* PDF Generation Styles */
-        .pdf-generating {
-            pointer-events: none;
-            opacity: 0.7;
-        }
-
-        /* Ensure receipt container is properly formatted for PDF */
-        .receipt-container {
-            position: relative;
-            page-break-inside: avoid;
-        }
-
-        .receipt-container * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-
-        /* Mobile Responsive */
-        @media (max-width: 768px) {
-            body {
-                padding-top: 40px;
-            }
-            
-            .navbar {
-                padding: 0.5rem 1rem;
-                height: 50px;
-            }
-            
-            .navbar-brand {
-                font-size: 1.3rem;
-            }
-            
-            .navbar-brand img {
-                width: 8vw;
-            }
-            
-            .navbar-actions {
-                gap: 0.5rem;
-            }
-            
-            .navbar-btn {
-                padding: 0.3rem 0.7rem;
-                font-size: 0.75rem;
-            }
-            
-            .receipt-container {
-                margin: 1rem;
-            }
-            
-            .receipt-header {
-                padding: 1rem;
-                flex-direction: column;
-                gap: 1rem;
-                text-align: center;
-            }
-            
-            .header-left,
-            .header-center,
-            .header-right {
-                flex: none;
-            }
-            
-            .header-left {
-                justify-content: center;
-            }
-            
-            .receipt-title {
-                font-size: 1.5rem;
-            }
-            
-            .receipt-date {
-                font-size: 0.9rem;
-            }
-            
-            .order-info-line {
-                padding: 0.5rem 1rem;
-                font-size: 0.8rem;
-            }
-            
-            .table-section {
-                padding: 1rem;
-            }
-            
-            .data-table {
-                font-size: 0.8rem;
-            }
-            
-            .data-table th,
-            .data-table td {
-                padding: 0.5rem;
-            }
-            
-            .totals-table {
-                width: 100%;
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding-top: 35px;
-            }
-            
-            .navbar {
-                padding: 0.4rem 0.8rem;
-                height: 40px;
-            }
-            
-            .navbar-brand {
-                font-size: 1.1rem;
-            }
-            
-            .navbar-brand img {
-                width: 8vw;
-            }
-            
-            .navbar-actions {
-                gap: 0.3rem;
-            }
-            
-            .navbar-btn {
-                padding: 0.2rem 0.5rem;
-                font-size: 0.7rem;
-            }
-            
-            .navbar-btn i {
-                font-size: 0.7rem;
-            }
-            
-            .receipt-header {
-                padding: 0.75rem;
-            }
-            
-            .company-name {
-                font-size: 1.1rem;
-            }
-            
-            .company-name img {
-                width: 6vw;
-            }
-            
-            .receipt-title {
-                font-size: 1.3rem;
-            }
-            
-            .receipt-date {
-                font-size: 0.8rem;
-            }
-        }
-
-        /* --- PDF/Page Break Enhancements --- */
-        .receipt-header,
-        .table-section,
-        .footer {
-            page-break-inside: avoid;
-            break-inside: avoid;
-        }
-        .table-section {
-            /* Add margin to help with page breaks */
             margin-bottom: 1.5rem;
         }
-        .force-page-break {
-            page-break-before: always;
-            break-before: page;
-        }
-        /* Ensure logo is crisp in PDF */
-        .company-name img {
-            image-rendering: auto;
-            max-width: 120px;
-            width: 120px;
-            height: auto;
+        .footer {
+            background: white;
+            padding: 1.5rem 0;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--xobo-gray);
+            border-top: 1px solid var(--xobo-border);
         }
     </style>
 </head>
 <body>
-    <!-- Navigation Bar -->
     <nav class="navbar">
-        <a href="../index.php" class="navbar-brand">
-            <img src="../assets/images/xobo-logo.png" alt="XOBO MART">
+        <a href="<?php echo $homeUrl; ?>" class="navbar-brand">
+            <img src="../assets/images/xobo-logo.png" alt="XOBO" class="logo">
         </a>
         <div class="navbar-actions">
-            <button onclick="downloadPDF(event)" class="navbar-btn navbar-btn-primary">
-                <i class="fas fa-download"></i>
-                Download PDF
+            <a href="<?php echo $buttonUrl; ?>" class="navbar-btn-primary" style="margin-right: 1rem; text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;">
+                <?php echo $buttonText; ?>
+            </a>
+            <button onclick="downloadPDF(event)" class="navbar-btn-primary">
+                <i class="fas fa-download"></i> Download PDF
             </button>
         </div>
     </nav>
 
     <div class="receipt-container">
-        <!-- Receipt Header -->
         <div class="receipt-header">
-            <div class="header-left">
-                <div class="company-name">
-                    <!-- Inline SVG for XOBO logo, styled white for PDF/print compatibility -->
-                    <svg id="xobo-logo-svg" width="80" height="32" viewBox="0 0 160 64" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;">
-                        <text x="0" y="24" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="bold" fill="white">XOBO</text>
-                        <text x="0" y="48" font-family="Segoe UI, Arial, sans-serif" font-size="10" fill="white">Efficient. Faster. Reliable.</text>
-                    </svg>
-                </div>
-            </div>
-            <div class="header-center">
-                <div class="receipt-title">Receipt</div>
-            </div>
-            <div class="header-right">
-                <div class="receipt-date"><?php echo date('M d, Y H:i', strtotime($order['created_at'])); ?></div>
-            </div>
+            <img src="../assets/images/xobo-logo-white.png" alt="XOBO" style="height:75px; width:auto; object-fit:contain;">
+            <div class="receipt-title">Receipt</div>
+            <div class="receipt-date"><?php echo date('M d, Y H:i', strtotime($order['created_at'])); ?></div>
         </div>
-        
-        <!-- Order Info Line -->
         <div class="order-info-line">
             Order #<?php echo htmlspecialchars($orderId); ?> | <?php echo htmlspecialchars($order['company_name']); ?>
         </div>
-
-        <!-- Product Information Table -->
         <div class="table-section">
-            <div class="section-title">
-                <i class="fas fa-box"></i>
-                Product Information
-            </div>
+            <div class="section-title"><i class="fas fa-box"></i> Product Information</div>
             <table class="data-table">
                 <thead>
                     <tr>
@@ -895,27 +279,18 @@ $pageTitle = 'Receipt #' . $orderId;
                 <tbody>
                     <?php foreach ($orderItems as $item): ?>
                     <tr>
-                        <td>
-                            <div class="product-name"><?php echo htmlspecialchars($item['name']); ?></div>
-                        </td>
-                        <td>
-                            <span class="product-sku"><?php echo htmlspecialchars($item['sku']); ?></span>
-                        </td>
-                        <td class="quantity" style="text-align:center;"><?php echo $item['quantity']; ?></td>
-                        <td class="weight" style="text-align:right;"><?php echo number_format($item['weight_kg'] * $item['quantity'], 2); ?></td>
+                        <td><div class="product-name"><?php echo htmlspecialchars($item['name']); ?></div></td>
+                        <td><span class="product-sku"><?php echo htmlspecialchars($item['sku']); ?></span></td>
+                        <td style="text-align:center;"><?php echo $item['quantity']; ?></td>
+                        <td style="text-align:right;"><?php echo number_format($item['weight_kg'] * $item['quantity'], 2); ?></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
-
-        <!-- Delivery Details Table -->
         <?php if (!empty($deliveryDetails)): ?>
         <div class="table-section">
-            <div class="section-title">
-                <i class="fas fa-truck"></i>
-                Delivery Details
-            </div>
+            <div class="section-title"><i class="fas fa-truck"></i> Delivery Details</div>
             <table class="data-table">
                 <thead>
                     <tr>
@@ -929,8 +304,8 @@ $pageTitle = 'Receipt #' . $orderId;
                 </thead>
                 <tbody>
                     <?php foreach ($orderItems as $item): ?>
-                        <?php if (isset($deliveryByProduct[$item['product_id']])): ?>
-                            <?php $delivery = $deliveryByProduct[$item['product_id']]; ?>
+                        <?php if (isset($deliveryByProduct[$item['product_id']])): 
+                            $delivery = $deliveryByProduct[$item['product_id']]; ?>
                             <tr>
                                 <td class="product-name"><?php echo htmlspecialchars($item['name']); ?></td>
                                 <td><?php echo htmlspecialchars($delivery['destination'] ?? '-'); ?></td>
@@ -945,171 +320,87 @@ $pageTitle = 'Receipt #' . $orderId;
             </table>
         </div>
         <?php endif; ?>
-
-        <!-- Order Totals Table -->
         <div class="table-section">
-            <div class="section-title">
-                <i class="fas fa-calculator"></i>
-                Order Summary
-            </div>
+            <div class="section-title"><i class="fas fa-calculator"></i> Order Summary</div>
             <table class="data-table totals-table">
                 <tbody>
                     <tr>
-                        <td class="totals-label">Total Items:</td>
-                        <td class="totals-value"><?php echo $totalItems; ?></td>
+                        <td>Total Items:</td>
+                        <td style="text-align:right;"><?php echo $totalItems; ?></td>
                     </tr>
                     <tr>
-                        <td class="totals-label">Total Weight:</td>
-                        <td class="totals-value"><?php echo number_format($totalWeight, 2); ?> kg</td>
+                        <td>Total Weight:</td>
+                        <td style="text-align:right;"><?php echo number_format($totalWeight, 2); ?> kg</td>
                     </tr>
                 </tbody>
             </table>
         </div>
-
-        <!-- Receiver and Driver Signature Section -->
-        <div class="table-section signature-section" style="padding-top: 1.5rem; padding-bottom: 2.5rem;">
-            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;">
+        <div class="table-section signature-section">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 2rem;">
                 <!-- Receiver Side -->
-                <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-start;">
-                    <div class="signature-title" style="font-weight: 600; color: var(--xobo-primary); margin-bottom: 1rem; font-size: 1.1rem;">Receiver</div>
-                    <div style="margin-bottom: 1.2rem; width: 100%;">
-                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Name:</label>
-                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                <div style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="signature-title">Receiver</div>
+                    <div style="margin-bottom: 2rem; width: 100%;">
+                        <label style="font-size: 0.9rem; color: #666;">Name:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; height: 2.2em; margin-top: 0.5rem;"></div>
                     </div>
-                    <div style="margin-bottom: 1.2rem; width: 100%;">
-                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Date:</label>
-                        <div style="border-bottom: 1.5px solid #bbb; min-width: 120px; width: 60%; height: 2.2em;"></div>
+                    <div style="margin-bottom: 2rem; width: 100%;">
+                        <label style="font-size: 0.9rem; color: #666;">Date:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; height: 2.2em; margin-top: 0.5rem;"></div>
                     </div>
-                    <div style="margin-bottom: 1.2rem; width: 100%;">
-                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Signature:</label>
-                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                    <div style="margin-bottom: 2rem; width: 100%;">
+                        <label style="font-size: 0.9rem; color: #666;">Signature:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; height: 2.2em; margin-top: 0.5rem;"></div>
                     </div>
                 </div>
+
                 <!-- Vertical Divider -->
-                <div class="vertical-divider" style="width: 2px; background: #e0e0e0; height: 140px; align-self: center;"></div>
+                <div style="width: 1px; background-color: #e0e0e0; align-self: stretch;"></div>
+
                 <!-- Driver Side -->
-                <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-start;">
-                    <div class="signature-title" style="font-weight: 600; color: var(--xobo-primary); margin-bottom: 1rem; font-size: 1.1rem;">Driver</div>
-                    <div style="margin-bottom: 1.2rem; width: 100%;">
-                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Name:</label>
-                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                <div style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="signature-title">Driver</div>
+                    <div style="margin-bottom: 2rem; width: 100%;">
+                        <label style="font-size: 0.9rem; color: #666;">Name:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; height: 2.2em; margin-top: 0.5rem;"></div>
                     </div>
-                    <div style="margin-bottom: 1.2rem; width: 100%;">
-                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Date:</label>
-                        <div style="border-bottom: 1.5px solid #bbb; min-width: 120px; width: 60%; height: 2.2em;"></div>
+                    <div style="margin-bottom: 2rem; width: 100%;">
+                        <label style="font-size: 0.9rem; color: #666;">Date:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; height: 2.2em; margin-top: 0.5rem;"></div>
                     </div>
-                    <div style="margin-bottom: 1.2rem; width: 100%;">
-                        <label style="font-size: 0.95rem; color: var(--xobo-gray);">Signature:</label>
-                        <div style="border-bottom: 1.5px solid #bbb; min-width: 180px; width: 80%; height: 2.2em;"></div>
+                    <div style="margin-bottom: 2rem; width: 100%;">
+                        <label style="font-size: 0.9rem; color: #666;">Signature:</label>
+                        <div style="border-bottom: 1.5px solid #bbb; height: 2.2em; margin-top: 0.5rem;"></div>
                     </div>
                 </div>
             </div>
         </div>
-
     </div>
-
+    <footer class="footer hide-for-print">
+        <p>&copy; <?php echo date('Y'); ?> XOBO. ALL RIGHTS RESERVED.</p>
+    </footer>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
-        // PDF Download functionality using html2pdf.js
         function downloadPDF(event) {
             event.preventDefault();
-            const receiptTitle = 'Receipt_<?php echo $orderId; ?>_<?php echo date('Y-m-d', strtotime($order['created_at'])); ?>.pdf';
-            const button = event.target.closest('button');
-            const originalButtonText = button.innerHTML;
-            button.innerHTML = '<i class="fas fa-file-pdf"></i> Generating PDF...';
+            const element = document.querySelector('.receipt-container');
+            const button = event.currentTarget;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
             button.disabled = true;
 
-            // Select the receipt container
-            const element = document.querySelector('.receipt-container');
-            element.classList.add('pdf-generating');
+            const opt = {
+                margin: 0.5,
+                filename: 'Receipt_<?php echo $orderId; ?>.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
 
-            // Hide the footer for PDF
-            const footer = document.querySelector('.footer');
-            footer.classList.add('hide-for-print');
-
-            // --- Fix for blank space at the top ---
-            // Save original styles and scroll position
-            const body = document.body;
-            const originalPaddingTop = body.style.paddingTop;
-            const originalBg = body.style.background;
-            const originalScrollY = window.scrollY;
-            // Remove padding and set background for PDF
-            body.style.paddingTop = '0';
-            body.style.background = '#fff';
-            window.scrollTo(0, 0);
-
-            // No need to wait for SVG logo to load
-            generatePDF();
-
-            function generatePDF() {
-                // PDF options
-                const opt = {
-                    margin:       0.3,
-                    filename:     receiptTitle,
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#fff' },
-                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-                };
-
-                html2pdf().set(opt).from(element).save().then(() => {
-                    // Restore styles and scroll
-                    body.style.paddingTop = originalPaddingTop;
-                    body.style.background = originalBg;
-                    window.scrollTo(0, originalScrollY);
-                    element.classList.remove('pdf-generating');
-                    footer.classList.remove('hide-for-print');
-                    button.innerHTML = originalButtonText;
-                    button.disabled = false;
-                }).catch(() => {
-                    body.style.paddingTop = originalPaddingTop;
-                    body.style.background = originalBg;
-                    window.scrollTo(0, originalScrollY);
-                    element.classList.remove('pdf-generating');
-                    footer.classList.remove('hide-for-print');
-                    button.innerHTML = originalButtonText;
-                    button.disabled = false;
-                    alert('Failed to generate PDF. Please try again.');
-                });
-            }
+            html2pdf().set(opt).from(element).save().then(() => {
+                button.innerHTML = '<i class="fas fa-download"></i> Download PDF';
+                button.disabled = false;
+            });
         }
-
-        // Hide browser headers and footers for printing
-        window.addEventListener('beforeprint', function() {
-            document.title = 'Receipt_<?php echo $orderId; ?>';
-        });
-
-        // Smooth reveal animation
-        document.addEventListener('DOMContentLoaded', function() {
-            const container = document.querySelector('.receipt-container');
-            container.style.opacity = '0';
-            container.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-                container.style.transition = 'all 0.5s ease-out';
-                container.style.opacity = '1';
-                container.style.transform = 'translateY(0)';
-            }, 100);
-        });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
-                    case 's':
-                        e.preventDefault();
-                        downloadPDF(e);
-                        break;
-                }
-            }
-        });
     </script>
-
-    <!-- XOBO-MART STYLE FOOTER -->
-    <footer class="footer hide-for-print" style="background: white !important; padding: 1rem 0; margin-top: 3rem; border-top: 1px solid var(--xobo-border); width: 100%;">
-        <div class="container" style="max-width: 800px; margin: 0 auto; padding: 0 2rem;">
-            <div class="footer-bottom" style="text-align: center; color: var(--xobo-gray); font-size: 14px;">
-                <p>&copy; 2025 XOBO MART. ALL RIGHTS RESERVED.</p>
-            </div>
-        </div>
-    </footer>
 </body>
 </html> 

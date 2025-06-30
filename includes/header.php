@@ -36,7 +36,7 @@ require_once __DIR__ . '/../config/db.php';
                                 <small><?php echo htmlspecialchars($_SESSION['role']); ?></small>
                             </div>
                             <div class="dropdown-divider"></div>
-                            <a href="<?php echo BASE_URL; ?>/auth/logout.php" class="dropdown-item logout-link">
+                            <a href="<?php echo BASE_URL; ?>/auth/logout" class="dropdown-item logout-link">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </a>
                         </div>
@@ -100,6 +100,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize cart count
     updateCartCount();
+    
+    // Initialize undo button
+    const undoButton = document.getElementById('undoButton');
+    if (undoButton) {
+        // Initially disable the undo button since there's nothing to undo
+        undoButton.disabled = true;
+        
+        // Add click event listener
+        undoButton.addEventListener('click', function() {
+            // Trigger undo action
+            if (window.undoLastAction && typeof window.undoLastAction === 'function') {
+                window.undoLastAction();
+            }
+        });
+    }
     
     // Check if user menu elements exist
     const userMenu = document.getElementById('user-menu');

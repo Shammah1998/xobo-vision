@@ -48,22 +48,22 @@ function hasRole($role) {
 // Redirect based on role
 function redirectByRole() {
     if (!isLoggedIn()) {
-        header('Location: ' . BASE_URL . '/auth/login.php');
+        header('Location: ' . BASE_URL . '/auth/login');
         exit;
     }
     
     switch ($_SESSION['role']) {
         case 'super_admin':
-            header('Location: ' . BASE_URL . '/admin/dashboard.php');
+            header('Location: ' . BASE_URL . '/admin/dashboard');
             break;
         case 'company_admin':
-            header('Location: ' . BASE_URL . '/company/products.php');
+            header('Location: ' . BASE_URL . '/company/products');
             break;
         case 'user':
-            header('Location: ' . BASE_URL . '/shop/shop.php?cid=' . $_SESSION['company_id']);
+            header('Location: ' . BASE_URL . '/shop/shop?cid=' . $_SESSION['company_id']);
             break;
         default:
-            header('Location: ' . BASE_URL . '/auth/login.php');
+            header('Location: ' . BASE_URL . '/auth/login');
     }
     exit;
 }

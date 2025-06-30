@@ -7,9 +7,9 @@ require_once '../config/db.php';
 // Redirect if already logged in
 if (isLoggedIn()) {
     if (isAdmin($pdo)) {
-        header('Location: ' . BASE_URL . '/admin/dashboard.php');
+        header('Location: ' . BASE_URL . '/admin/dashboard');
     } else {
-        header('Location: ' . BASE_URL . '/index.php');
+        header('Location: ' . BASE_URL . '/index');
     }
     exit;
 }
@@ -43,10 +43,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Redirect based on admin status and user role
                     if (isAdmin($pdo)) {
-                        header('Location: ' . BASE_URL . '/admin/dashboard.php');
+                        header('Location: ' . BASE_URL . '/admin/dashboard');
                     } else {
                         // Redirect users to company-specific homepage
-                        header('Location: ' . BASE_URL . '/index.php');
+                        header('Location: ' . BASE_URL . '/index');
                     }
                     exit;
                 }

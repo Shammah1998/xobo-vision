@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_driver_order_i
             $stmt->execute([$orderId, $driverName]);
         }
     }
-    header('Location: orders.php');
+    header('Location: orders');
     exit;
 }
 
@@ -107,7 +107,7 @@ if ($orderIds) {
         <input type="date" name="to_date" value="<?php echo htmlspecialchars($toDate); ?>" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 160px;">
         <button type="submit" class="btn btn-primary">Search</button>
         <?php if ($orderIdSearch || $fromDate || $toDate): ?>
-            <a href="orders.php" class="btn btn-secondary">Clear</a>
+            <a href="orders" class="btn btn-secondary">Clear</a>
         <?php endif; ?>
         <button type="button" class="btn btn-success" id="download-csv-btn">Download CSV</button>
     </form>
@@ -222,7 +222,7 @@ if ($orderIds) {
                                             <!-- Remove the old driver label from below the buttons -->
                                         <?php endif; ?>
                                     </form>
-                                    <a href="<?php echo BASE_URL; ?>/shop/order-receipt.php?order_id=<?php echo $order['id']; ?>" class="btn btn-primary btn-sm align-btns" style="width: 140px; height: 40px; text-align: center; display: flex; align-items: center; justify-content: center;">
+                                    <a href="<?php echo BASE_URL; ?>/shop/order-receipt?order_id=<?php echo $order['id']; ?>" class="btn btn-primary btn-sm align-btns" style="width: 140px; height: 40px; text-align: center; display: flex; align-items: center; justify-content: center;">
                                         <span style="display: flex; align-items: center; justify-content: center; width: 100%;">
                                             <i class="fas fa-eye" style="margin-right: 0.4em;"></i>
                                             <span>View Receipt</span>
@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var orderId = btn.getAttribute('data-order-id');
             var driverSpan = btn.closest('span');
             var driverInput = document.getElementById('driver_name_' + orderId);
-            fetch('delete-driver.php', {
+            fetch('delete-driver', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'order_id=' + encodeURIComponent(orderId)
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var btn = form.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.textContent = 'Saving...';
-            fetch('assign-driver.php', {
+            fetch('assign-driver', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'assign_driver_order_id=' + encodeURIComponent(orderId) + '&driver_name=' + encodeURIComponent(driverName)
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('download-csv-btn').addEventListener('click', function() {
         const params = new URLSearchParams(window.location.search);
-        window.location.href = 'export-orders.php?' + params.toString();
+        window.location.href = 'export-orders?' + params.toString();
     });
 });
 </script>

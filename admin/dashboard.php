@@ -6,7 +6,7 @@ require_once '../config/db.php';
 
 // Check if user is admin (first user or super_admin)
 if (!isAdmin($pdo)) {
-    header('Location: ' . BASE_URL . '/index.php');
+    header('Location: ' . BASE_URL . '/index');
     exit;
 }
 
@@ -134,7 +134,7 @@ include 'includes/admin_header.php';
                                     View
                                     <i class="fas fa-chevron-down" id="chevron-icon-<?php echo $company['id']; ?>" style="transition: transform 0.2s;"></i>
                                 </button>
-                                <a href="company-products.php?company_id=<?php echo $company['id']; ?>" class="btn btn-secondary btn-sm" style="min-width: 60px; display: flex; align-items: center; justify-content: center; gap: 0.4em;">
+                                <a href="company-products?company_id=<?php echo $company['id']; ?>" class="btn btn-secondary btn-sm" style="min-width: 60px; display: flex; align-items: center; justify-content: center; gap: 0.4em;">
                                     Products
                                     <i class="fas fa-box-open"></i>
                                 </a>
@@ -184,7 +184,7 @@ include 'includes/admin_header.php';
                                                 <td style="padding:0.5rem; text-transform:capitalize;"><?php echo htmlspecialchars($user['role']); ?></td>
                                                 <td style="padding:0.5rem;"><?php echo date('M d, Y', strtotime($user['created_at'])); ?></td>
                                                 <td style="padding:0.5rem; text-align:center;">
-                                                    <a href="edit-user.php?id=<?php echo $user['id']; ?>" class="btn btn-primary btn-sm" title="Edit User" style="padding: 0.4rem 0.7rem; min-width: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                                                    <a href="edit-user?id=<?php echo $user['id']; ?>" class="btn btn-primary btn-sm" title="Edit User" style="padding: 0.4rem 0.7rem; min-width: 32px; display: inline-flex; align-items: center; justify-content: center;">
                                                         <i class="fas fa-pen"></i>
                                                     </a>
                                                 </td>
@@ -205,7 +205,7 @@ include 'includes/admin_header.php';
 
     <?php if (count($recentCompanies) >= 10): ?>
     <div style="text-align: center; margin-top: 1rem;">
-        <a href="<?php echo BASE_URL; ?>/admin/companies.php" class="btn" style="background: var(--xobo-primary); color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 4px;">
+        <a href="<?php echo BASE_URL; ?>/admin/companies" class="btn" style="background: var(--xobo-primary); color: white; text-decoration: none; padding: 0.5rem 1rem; border-radius: 4px;">
             View All Companies
         </a>
     </div>
