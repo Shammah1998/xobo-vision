@@ -27,8 +27,8 @@ function isAdmin($pdo = null) {
     }
     if (!isLoggedIn()) return false;
     
-    // Check if user has super_admin role
-    if (isset($_SESSION['role']) && $_SESSION['role'] === 'super_admin') {
+    // Check if user has super_admin or admin role
+    if (isset($_SESSION['role']) && ($_SESSION['role'] === 'super_admin' || $_SESSION['role'] === 'admin')) {
         return true;
     }
     

@@ -31,8 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $user = $stmt->fetch();
             
             if ($user && password_verify($password, $user['password'])) {
-                // Check if company is approved (except for super_admin)
-                if ($user['role'] !== 'super_admin' && $user['company_status'] !== 'approved') {
+                // Check if company is approved ONLY for regular users
+                if ($user['role'] === 'user' && $user['company_status'] !== 'approved') {
                     $error = 'Your company is not yet approved. Please wait for admin approval.';
                 } else {
                     // Set session variables
