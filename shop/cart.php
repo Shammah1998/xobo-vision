@@ -205,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmt = $pdo->prepare("SELECT name FROM companies WHERE id = ? AND status = 'approved'");
 $stmt->execute([$companyId]);
 $company = $stmt->fetch();
-$companyName = $company ? $company['name'] : 'XOBO MART';
+$companyName = $company ? $company['name'] : '';
 
 // Get cart items with product details and delivery details
 $cartItems = [];

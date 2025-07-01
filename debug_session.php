@@ -7,7 +7,8 @@ require_once 'includes/functions.php';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Session Debug - XOBO MART</title>
+    <title>Session Debug - User Panel</title>
+    <link rel="icon" type="image/png" href="assets/images/XDL-ICON.png">
     <style>
         body { font-family: 'Segoe UI', sans-serif; margin: 2rem; background: #f5f5f5; }
         .debug-container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }

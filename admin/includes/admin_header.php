@@ -17,10 +17,11 @@ if (!isAdmin($pdo)) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo isset($pageTitle) ? htmlspecialchars($pageTitle) : 'Admin Panel - XOBO MART'; ?></title>
+    <title>Admin Panel</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="icon" type="image/png" href="<?php echo BASE_URL; ?>/assets/images/XDL-ICON.png">
     <style>
         body {
             margin: 0;
@@ -290,6 +291,9 @@ if (!isAdmin($pdo)) {
                     </a>
                     <a href="<?php echo BASE_URL; ?>/admin/create-company" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'create-company.php' ? 'active' : ''; ?>">
                         <i class="fas fa-plus-circle"></i> Create Company
+                    </a>
+                    <a href="<?php echo BASE_URL; ?>/admin/all-products.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'all-products.php' ? 'active' : ''; ?>">
+                        <i class="fas fa-box"></i> All Products
                     </a>
                 </div>
 

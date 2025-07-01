@@ -63,7 +63,7 @@ if ($_SESSION['role'] === 'company_admin') {
     ];
 }
 
-$pageTitle = $company['name'] . ' - XOBO MART';
+$pageTitle = isset($company['name']) ? $company['name'] . ' - User Panel' : 'User Panel';
 include 'includes/header.php';
 ?>
 

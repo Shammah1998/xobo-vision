@@ -61,7 +61,7 @@ $stmt = $pdo->prepare("SELECT name FROM companies WHERE status = 'approved' ORDE
 $stmt->execute();
 $companies = $stmt->fetchAll();
 
-$pageTitle = 'Join Company - XOBO MART';
+$pageTitle = 'Join Company - User Panel';
 include '../includes/header.php';
 ?>
 

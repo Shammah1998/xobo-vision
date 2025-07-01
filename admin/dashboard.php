@@ -45,6 +45,10 @@ $approvedCompanies = $stmt->fetch()['approved_companies'];
 $stmt = $pdo->query("SELECT COUNT(*) as total_users FROM users");
 $totalUsers = $stmt->fetch()['total_users'];
 
+// Add: Get total products
+$stmt = $pdo->query("SELECT COUNT(*) as total_products FROM products");
+$totalProducts = $stmt->fetch()['total_products'];
+
 // Get recent companies
 $stmt = $pdo->prepare("
     SELECT c.*, u.email as admin_email 
@@ -95,6 +99,10 @@ include 'includes/admin_header.php';
     <div class="stat-card">
         <h3>Total Users</h3>
         <p class="stat-number"><?php echo $totalUsers; ?></p>
+    </div>
+    <div class="stat-card">
+        <h3>Total Products</h3>
+        <p class="stat-number"><?php echo $totalProducts; ?></p>
     </div>
 </div>
 

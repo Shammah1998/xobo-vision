@@ -1,4 +1,4 @@
-/* XOBO-MART INSPIRED DESIGN SYSTEM - TOP 1% E-COMMERCE DESIGN */
+/* DESIGN SYSTEM - TOP 1% E-COMMERCE DESIGN */
 
 /* ========== RESET & BASE STYLES ========== */
 * {
@@ -17,7 +17,7 @@ body {
     min-height: 100vh;
 }
 
-/* ========== XOBO-MART COLOR SYSTEM ========== */
+/* ========== COLOR SYSTEM ========== */
 :root {
     --xobo-primary: #16234d;
     --xobo-primary-hover: #1a2654;
@@ -37,7 +37,7 @@ body {
     padding: 0 2rem;
 }
 
-/* ========== NAVIGATION - XOBO-MART STYLE ========== */
+/* ========== NAVIGATION - STYLE ========== */
 .header {
     background: var(--xobo-white);
     box-shadow: 0 2px 4px var(--xobo-shadow);
@@ -55,7 +55,7 @@ body {
     padding: 0 5rem;
 }
 
-/* Logo Styling - Xobo-Mart Approach */
+/* Logo Styling - Project Approach */
 .nav-brand {
     margin-right: 2rem;
 }
@@ -184,7 +184,7 @@ body {
     line-height: 1.2;
 }
 
-/* User Menu - Xobo-Mart Style */
+/* User Menu - Project Style */
 .user-dropdown {
     position: relative;
 }
@@ -293,7 +293,7 @@ body {
     margin: 0 0.5rem;
 }
 
-/* ========== HERO SECTION - XOBO-MART INSPIRED ========== */
+/* ========== HERO SECTION - INSPIRED ========== */
 .hero-banner {
     background: var(--xobo-primary);
     color: white;
@@ -364,7 +364,7 @@ body {
     padding: 2rem 0;
 }
 
-/* ========== PRODUCT GRID - XOBO-MART 6-COLUMN SYSTEM ========== */
+/* ========== PRODUCT GRID - 6-COLUMN SYSTEM ========== */
 .products-section {
     margin: 2rem 0;
 }
@@ -456,7 +456,7 @@ body {
     margin-bottom: 0.5rem;
 }
 
-/* Discount Labels - Xobo-Mart Style */
+/* Discount Labels - Project Style */
 .discount-label {
     position: absolute;
     top: 10px;
@@ -547,7 +547,7 @@ body {
     box-shadow: 0 0 0 2px rgba(22, 35, 77, 0.1);
 }
 
-/* ========== FOOTER - XOBO-MART STYLE ========== */
+/* ========== FOOTER - STYLE ========== */
 .footer {
     background: var(--xobo-white);
     padding: 1rem 0;

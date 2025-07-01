@@ -9,6 +9,7 @@ require_once 'config/config.php'; // For BASE_URL
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - Page Not Found</title>
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css">
+    <link rel="icon" type="image/png" href="assets/images/XDL-ICON.png">
     <style>
         body {
             margin: 0;

@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$pageTitle = 'Login - XOBO MART';
+$pageTitle = 'Login - User Panel';
 include '../includes/header.php';
 ?>
 

@@ -100,7 +100,7 @@ if (!empty($db_orders)) {
     }
 }
 
-$pageTitle = 'Company Orders - XOBO MART';
+$pageTitle = 'Company Orders - User Panel';
 include '../includes/header.php';
 ?>
 
