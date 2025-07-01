@@ -516,6 +516,14 @@ body {
     color: white;
 }
 
+/* OVERRIDE: Always keep .btn-danger red, even on hover/focus */
+.btn.btn-danger:hover, .btn.btn-danger:focus {
+    background: #dc3545 !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
 /* ========== FORMS - CLEAN DESIGN ========== */
 .form-group {
     margin-bottom: 1rem;

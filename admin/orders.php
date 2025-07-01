@@ -1,4 +1,5 @@
 <?php
+require_once '../includes/functions.php';
 // Handle driver assignment BEFORE any output or includes
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_driver_order_id'], $_POST['driver_name'])) {
     require_once '../config/db.php';
@@ -17,6 +18,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_driver_order_i
     }
     header('Location: orders');
     exit;
+}
+
+// Debug: log POST data
+file_put_contents(__DIR__ . '/post_debug.log', print_r($_POST, true), FILE_APPEND);
+
+// Handle delete all orders (super admin only)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_all_orders']) && hasRole('super_admin')) {
+    // Debug: log if delete block is reached
+    file_put_contents(__DIR__ . '/delete_debug.log', 'Delete block reached at ' . date('c') . PHP_EOL, FILE_APPEND);
+    try {
+        $pdo->exec('DELETE FROM order_items');
+        $pdo->exec('DELETE FROM order_delivery_details');
+        $pdo->exec('DELETE FROM delivery_details');
+        $pdo->exec('DELETE FROM drivers');
+        $pdo->exec('DELETE FROM order_vehicle_types');
+        $pdo->exec('DELETE FROM orders');
+        $message = 'All orders and related data have been deleted.';
+    } catch (PDOException $e) {
+        $message = 'Error deleting orders: ' . $e->getMessage();
+    }
 }
 
 include 'includes/admin_header.php';
@@ -101,16 +122,19 @@ if ($orderIds) {
 
 <div class="admin-card">
     <h2 style="margin-bottom: 1rem; color: var(--xobo-primary);">All Orders</h2>
-    <form method="GET" style="display: flex; gap: 1rem; align-items: end; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <form method="POST" style="display: flex; gap: 1rem; align-items: end; margin-bottom: 1.5rem; flex-wrap: wrap;">
         <input type="text" name="order_id" value="<?php echo htmlspecialchars($orderIdSearch); ?>" placeholder="Order ID" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 120px;">
         <input type="date" name="from_date" value="<?php echo htmlspecialchars($fromDate); ?>" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 160px;">
         <input type="date" name="to_date" value="<?php echo htmlspecialchars($toDate); ?>" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 160px;">
-        <button type="submit" class="btn btn-primary">Search</button>
+        <button type="submit" class="btn btn-primary" name="search_orders">Search</button>
         <?php if ($orderIdSearch || $fromDate || $toDate): ?>
             <a href="orders" class="btn btn-secondary">Clear</a>
         <?php endif; ?>
         <button type="button" class="btn btn-success" id="download-csv-btn">Download CSV</button>
     </form>
+    <?php if (!empty($message)): ?>
+        <div class="alert alert-success" style="margin-bottom:1rem;"><?php echo htmlspecialchars($message); ?></div>
+    <?php endif; ?>
     <div class="table-container">
         <table class="data-table">
             <thead>
@@ -353,6 +377,18 @@ document.addEventListener('DOMContentLoaded', function() {
     font-weight: 600;
     padding: 0 !important;
     line-height: 1 !important;
+}
+button[name="delete_all_orders"]:hover,
+button[name="delete_all_orders"]:focus,
+button[name="delete_all_orders"]:active {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+    border-color: #dc3545 !important;
+    box-shadow: none !important;
+    outline: none !important;
+    filter: none !important;
+    transition: none !important;
+    cursor: pointer;
 }
 </style>
 

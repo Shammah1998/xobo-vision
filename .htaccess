@@ -1,6 +1,12 @@
+# === XOBO-C .htaccess ===
+# For local development, use RewriteBase /xobo-c/
+# For production (domain root), use RewriteBase /
+# Change ONLY the RewriteBase line below as needed.
+
 Options -MultiViews
 RewriteEngine On
-RewriteBase /
+RewriteBase /xobo-c/
+# RewriteBase /
 
 # For subdomain root, no RewriteBase needed (or use /)
 # RewriteBase /

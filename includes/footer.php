@@ -12,6 +12,6 @@ require_once __DIR__ . '/../config/config.php';
         </div>
     </footer>
     
-    <script src="<?php echo BASE_URL; ?>/assets/js/shop.js"></script>
+    <script src="<?php echo BASE_URL; ?>/assets/js/shop.obf.js"></script>
 </body>
 </html> 
