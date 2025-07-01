@@ -1,6 +1,6 @@
 Options -MultiViews
 RewriteEngine On
-RewriteBase /xobo-c/
+RewriteBase /
 
 # For subdomain root, no RewriteBase needed (or use /)
 # RewriteBase /
