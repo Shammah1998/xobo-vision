@@ -5,6 +5,10 @@ require_once '../includes/functions.php';
 
 // Only allow admins
 session_start();
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    header('Location: ../auth/login.php?error=Session expired, please log in again.');
+    exit;
+}
 if (!isAdmin($pdo)) {
     header('HTTP/1.0 403 Forbidden');
     exit('Access denied');

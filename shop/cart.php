@@ -1,6 +1,10 @@
 <?php
 require_once '../config/config.php';
 session_start();
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    header('Location: ../auth/login.php?error=Session expired, please log in again.');
+    exit;
+}
 require_once '../config/db.php';
 require_once '../includes/functions.php';
 

@@ -7,6 +7,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['order_id'])) {
 }
 
 session_start();
+if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
+    header('Location: ../auth/login.php?error=Session expired, please log in again.');
+    exit;
+}
+
 require_once '../config/db.php';
 require_once '../includes/functions.php';
 
