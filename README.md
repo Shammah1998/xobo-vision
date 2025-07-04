@@ -48,12 +48,7 @@ A complete multi-tenant e-commerce platform built with pure PHP, MySQL, and vani
 ### Step 2: Configuration
 1. Clone/download the project to your web server directory
 2. Update database credentials in `config/db.php` if needed:
-   ```php
-   define('DB_HOST', 'localhost');
-   define('DB_NAME', 'xobo-c');
-   define('DB_USER', 'root');
-   define('DB_PASS', '');
-   ```
+
 
 ### Step 3: Access the Application
 1. Navigate to `http://localhost/xobo-vision` in your browser
