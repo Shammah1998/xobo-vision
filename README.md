@@ -40,10 +40,6 @@ A complete multi-tenant e-commerce platform built with pure PHP, MySQL, and vani
 - MySQL 5.7 or higher
 - Web server (Apache/Nginx)
 
-### Step 1: Database Setup
-1. Open phpMyAdmin or your MySQL client
-2. Create a new database named `xobo-c`
-3. Import the `database_schema.sql` file to create all tables
 
 ### Step 2: Configuration
 1. Clone/download the project to your web server directory
@@ -55,12 +51,6 @@ A complete multi-tenant e-commerce platform built with pure PHP, MySQL, and vani
 2. The system will redirect to the login page
 
 ## Default Login Credentials
-
-### Super Admin
-- **Email**: admin@xobo.com
-- **Password**: password
-
-*Note: Change this password immediately in production!*
 
 ## User Flows
 
