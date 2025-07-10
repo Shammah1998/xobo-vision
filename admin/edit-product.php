@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sku = trim($_POST['sku'] ?? '');
     $weight = (float)($_POST['weight_kg'] ?? 0);
     $price = (float)($_POST['rate_ksh'] ?? 0);
-    if ($name && $sku && $weight > 0 && $price > 0) {
+    if ($name && $sku && $weight > 0 && $price >= 0) {
         $stmt = $pdo->prepare('UPDATE products SET name = ?, sku = ?, weight_kg = ?, rate_ksh = ? WHERE id = ? AND company_id = ?');
         if ($stmt->execute([$name, $sku, $weight, $price, $productId, $companyId])) {
             header('Location: company-products.php?company_id=' . $companyId . '&msg=updated');
@@ -76,7 +76,7 @@ include 'includes/admin_header.php';
         </div>
         <div class="form-group">
             <label for="rate_ksh" style="font-weight: 600; color: var(--xobo-primary);">Price (KSH)</label>
-            <input type="number" name="rate_ksh" id="rate_ksh" step="0.01" min="0.01" value="<?php echo htmlspecialchars($product['rate_ksh']); ?>" required style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px;">
+            <input type="number" name="rate_ksh" id="rate_ksh" step="0.01" min="0" value="<?php echo htmlspecialchars($product['rate_ksh']); ?>" required style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px;">
         </div>
         <div style="display: flex; gap: 1rem; justify-content: flex-end;">
             <a href="company-products.php?company_id=<?php echo $companyId; ?>" class="btn btn-secondary">Back</a>

@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $sku = trim($product['sku'] ?? '');
             $weight = (float)($product['weight_kg'] ?? 0);
             $price = (float)($product['rate_ksh'] ?? 0);
-            if ($name && $sku && $weight > 0 && $price > 0) {
+            if ($name && $sku && $weight > 0 && $price >= 0) {
                 if ($stmt->execute([$companyId, $name, $sku, $weight, $price])) {
                     $addedCount++;
                 }
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sku = trim($_POST['sku'] ?? '');
         $weight = (float)($_POST['weight_kg'] ?? 0);
         $price = (float)($_POST['rate_ksh'] ?? 0);
-        if ($name && $sku && $weight > 0 && $price > 0) {
+        if ($name && $sku && $weight > 0 && $price >= 0) {
             $stmt = $pdo->prepare('INSERT INTO products (company_id, name, sku, weight_kg, rate_ksh) VALUES (?, ?, ?, ?, ?)');
             if ($stmt->execute([$companyId, $name, $sku, $weight, $price])) {
                 header("Location: company-products?company_id=$companyId");
@@ -85,7 +85,7 @@ include 'includes/admin_header.php';
         </div>
         <div class="form-group">
             <label for="rate_ksh" style="font-weight: 600; color: var(--xobo-primary);">Price (KSH)</label>
-            <input type="number" name="rate_ksh" id="rate_ksh" step="0.01" min="0.01" style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px;">
+            <input type="number" name="rate_ksh" id="rate_ksh" step="0.01" min="0" style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px;">
         </div>
         <div style="display: flex; gap: 1rem; justify-content: flex-end;">
             <a href="company-products.php?company_id=<?php echo $companyId; ?>" class="btn btn-secondary">Back</a>
@@ -135,7 +135,7 @@ function addProductRow(name = '', sku = '', weight = '', price = '') {
             <td><input type="text" name="products[${productCount}][name]" required value="${name}" style="width: 100%;"></td>
             <td><input type="text" name="products[${productCount}][sku]" required value="${sku}" style="width: 100%;"></td>
             <td><input type="number" name="products[${productCount}][weight_kg]" step="0.01" min="0.01" required value="${weight}" style="width: 100%;"></td>
-            <td><input type="number" name="products[${productCount}][rate_ksh]" step="0.01" min="0.01" required value="${price}" style="width: 100%;"></td>
+            <td><input type="number" name="products[${productCount}][rate_ksh]" step="0.01" min="0" required value="${price}" style="width: 100%;"></td>
             <td style="text-align: center;"><button type="button" onclick="removeProduct(${productCount})" class="btn-sm btn-danger">Remove</button></td>
         </tr>
     `;
@@ -239,7 +239,7 @@ document.getElementById('import-excel-btn').addEventListener('click', function()
                     const skuStr = sku.toString().trim();
                     const weightNum = parseFloat(weight);
                     const priceNum = parseFloat(price);
-                    if (nameStr && skuStr && !isNaN(weightNum) && !isNaN(priceNum) && weightNum > 0 && priceNum > 0) {
+                    if (nameStr && skuStr && !isNaN(weightNum) && !isNaN(priceNum) && weightNum > 0 && priceNum >= 0) { // <-- allow price to be zero
                         addProductRow(nameStr, skuStr, weightNum.toString(), priceNum.toString());
                         importedCount++;
                     } else {

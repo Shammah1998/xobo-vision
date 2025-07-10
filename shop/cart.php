@@ -33,6 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['remove_item'])) {
         $productId = (int)$_POST['product_id'];
         unset($_SESSION['cart'][$productId]);
+        // Also remove accessories for this product
+        if (isset($_SESSION['cart_accessories'][$productId])) {
+            unset($_SESSION['cart_accessories'][$productId]);
+        }
         $message = 'Item removed from cart!';
     } elseif (isset($_POST['delete_selected'])) {
         if (isset($_POST['selected_items']) && !empty($_POST['selected_items'])) {
@@ -41,6 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $productId = (int)$productId;
                 if (isset($_SESSION['cart'][$productId])) {
                     unset($_SESSION['cart'][$productId]);
+                    // Also remove accessories for this product
+                    if (isset($_SESSION['cart_accessories'][$productId])) {
+                        unset($_SESSION['cart_accessories'][$productId]);
+                    }
                     // Also remove delivery details for this product
                     $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND product_id = ? AND session_id = ?");
                     $stmt->execute([$userId, $productId, session_id()]);
@@ -95,6 +103,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Your cart is empty!";
         } else {
             try {
+                // Create order_accessories table if it doesn't exist and accessories are present
+                if (!empty($_SESSION['cart_accessories'])) {
+                    $pdo->exec("CREATE TABLE IF NOT EXISTS order_accessories (
+                        id INT AUTO_INCREMENT PRIMARY KEY,
+                        order_id INT NOT NULL,
+                        main_product_id INT NOT NULL,
+                        accessory_product_id INT NULL,
+                        accessory_name VARCHAR(255) NOT NULL,
+                        accessory_sku VARCHAR(100) NOT NULL,
+                        accessory_weight DECIMAL(5,2) NOT NULL,
+                        created_at DATETIME NOT NULL,
+                        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+                        FOREIGN KEY (main_product_id) REFERENCES products(id),
+                        FOREIGN KEY (accessory_product_id) REFERENCES products(id)
+                    )");
+                }
+                
                 $pdo->beginTransaction();
                 
                 // Calculate total cost
@@ -138,6 +163,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt->execute([$orderId, $item['product_id'], $item['quantity'], $item['line_total']]);
                 }
                 
+                // Save accessories information if any exist
+                if (!empty($_SESSION['cart_accessories'])) {
+                    $stmt = $pdo->prepare("INSERT INTO order_accessories (order_id, main_product_id, accessory_product_id, accessory_name, accessory_sku, accessory_weight, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+                    foreach ($_SESSION['cart_accessories'] as $mainProductId => $accessories) {
+                        // Only save accessories for products that are actually in this order
+                        if (isset($_SESSION['cart'][$mainProductId])) {
+                            // Check if the main product is 'vision plus accessories'
+                            $productStmt = $pdo->prepare("SELECT name FROM products WHERE id = ?");
+                            $productStmt->execute([$mainProductId]);
+                            $productName = $productStmt->fetchColumn();
+                            
+                            // Only save accessories if the main product is 'vision plus accessories'
+                            if (strtolower(trim($productName)) === 'vision plus accessories') {
+                                foreach ($accessories as $accessory) {
+                                    $stmt->execute([
+                                        $orderId,
+                                        $mainProductId,
+                                        $accessory['id'] ?? null,
+                                        $accessory['name'],
+                                        $accessory['sku'],
+                                        floatval(str_replace(' kg', '', $accessory['weight']))
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // Get delivery details and save them to order_delivery_details
                 $stmt = $pdo->prepare("SELECT * FROM delivery_details WHERE user_id = ? AND product_id IN ($placeholders) AND session_id = ?");
                 $stmt->execute(array_merge([$userId], $productIds, [session_id()]));
@@ -159,6 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 // Clean up cart and delivery details
                 $_SESSION['cart'] = [];
+                $_SESSION['cart_accessories'] = [];
                 $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND session_id = ?");
                 $stmt->execute([$userId, session_id()]);
                 
@@ -169,7 +223,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
                 
             } catch (Exception $e) {
-                $pdo->rollBack();
+                // Only rollback if there's an active transaction
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
                 $error = "Failed to process order. Please try again. Error: " . $e->getMessage();
             }
         }
@@ -177,6 +234,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Handle bulk adding of products from index.php
         if (!isset($_SESSION['cart'])) {
             $_SESSION['cart'] = [];
+        }
+        if (!isset($_SESSION['cart_accessories'])) {
+            $_SESSION['cart_accessories'] = [];
         }
         
         $addedCount = 0;
@@ -189,6 +249,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($stmt->fetch()) {
                     $_SESSION['cart'][$productId] = ($_SESSION['cart'][$productId] ?? 0) + 1;
                     $addedCount++;
+                    // If accessories are posted, store them
+                    if (isset($_POST['accessories'])) {
+                        $accessories = json_decode($_POST['accessories'], true);
+                        if (is_array($accessories)) {
+                            $_SESSION['cart_accessories'][$productId] = $accessories;
+                        }
+                    }
                 }
             }
         }
@@ -251,6 +318,25 @@ if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
         $totalItems += $quantity;
     }
 }
+
+// Filter out accessory-only products from cartItems
+$accessoryProductIds = [];
+if (!empty($_SESSION['cart_accessories'])) {
+    foreach ($_SESSION['cart_accessories'] as $mainId => $accessories) {
+        foreach ($accessories as $acc) {
+            if (!empty($acc['id'])) {
+                $accessoryProductIds[] = (int)$acc['id'];
+            }
+        }
+    }
+}
+// Only filter out products that are accessories AND not main products in cart
+$cartItems = array_filter($cartItems, function($item) use ($accessoryProductIds) {
+    $productId = (int)$item['product']['id'];
+    // Keep the product if it's in the main cart (even if it's also an accessory)
+    // Only filter out if it's ONLY an accessory and not a main cart item
+    return !in_array($productId, $accessoryProductIds, true) || isset($_SESSION['cart'][$productId]);
+});
 
 // Check if any delivery details exist for validation
 $hasDeliveryDetails = false;
@@ -956,6 +1042,14 @@ include '../includes/header.php';
                                 <td class="item-number"><?php echo $index + 1; ?></td>
                                 <td class="product-name">
                                     <?php echo htmlspecialchars($item['product']['name']); ?>
+                                    <?php if (strtolower(trim($item['product']['name'])) === 'vision plus accessories' && !empty($_SESSION['cart_accessories'][$item['product']['id']])): ?>
+                                        <button type="button" class="details-toggle-btn accessories-toggle-btn" 
+                                                onclick="toggleAccessoriesRow(<?php echo $item['product']['id']; ?>)"
+                                                data-product-id="<?php echo $item['product']['id']; ?>"
+                                                style="margin-left:12px; vertical-align:middle;">
+                                            <i class="fas fa-chevron-down"></i> View
+                                        </button>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <span class="product-sku"><?php echo htmlspecialchars($item['product']['sku']); ?></span>
@@ -994,6 +1088,35 @@ include '../includes/header.php';
                                     </button>
                                 </td>
                             </tr>
+                            <?php if (strtolower(trim($item['product']['name'])) === 'vision plus accessories' && !empty($_SESSION['cart_accessories'][$item['product']['id']])): ?>
+                            <tr class="accessories-details-row" id="accessories-row-<?php echo $item['product']['id']; ?>" style="display:none; background:#f6f8fa;">
+                                <td colspan="9" style="padding: 1.2rem 2rem;">
+                                    <div class="accessory-list" style="margin-top:0;">
+                                        <div style="font-weight:600; color:var(--xobo-primary); margin-bottom:0.5rem; font-size:1.05rem;">
+                                            <i class="fas fa-puzzle-piece"></i> Included Accessories
+                                        </div>
+                                        <table style="width:100%; border-collapse:collapse; background:transparent;">
+                                            <thead>
+                                                <tr style="background:transparent; color:#888; font-size:0.95em;">
+                                                    <th style="text-align:left; padding:4px 8px;">Name</th>
+                                                    <th style="text-align:left; padding:4px 8px;">SKU</th>
+                                                    <th style="text-align:left; padding:4px 8px;">Weight (kg)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                            <?php foreach ($_SESSION['cart_accessories'][$item['product']['id']] as $acc): ?>
+                                                <tr>
+                                                    <td style="padding:4px 8px;"><span class="product-name"><?php echo htmlspecialchars($acc['name']); ?></span></td>
+                                                    <td style="padding:4px 8px;"><span class="product-sku"><?php echo htmlspecialchars($acc['sku']); ?></span></td>
+                                                    <td style="padding:4px 8px;"><span class="product-weight"><?php echo htmlspecialchars($acc['weight']); ?></span></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
                             
                             <!-- Expandable Delivery Details Row -->
                             <tr class="delivery-details-row" id="delivery-row-<?php echo $item['product']['id']; ?>" style="display: none;">
@@ -1535,6 +1658,23 @@ if (vehicleTypeSelect) {
 }
 // Initial combined check
 checkVehicleTypeAndUpdateButton();
+
+function toggleAccessoriesRow(productId) {
+    const row = document.getElementById('accessories-row-' + productId);
+    const button = document.querySelector('.accessories-toggle-btn[data-product-id="' + productId + '"]');
+    const icon = button.querySelector('i');
+    if (row.style.display === 'none' || row.style.display === '') {
+        row.style.display = 'table-row';
+        button.classList.add('expanded');
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+    } else {
+        row.style.display = 'none';
+        button.classList.remove('expanded');
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+    }
+}
 </script>
 
 <?php include '../includes/footer.php'; ?> 

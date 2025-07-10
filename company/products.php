@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $weight = (float)$_POST['weight_kg'];
         $rate = (float)$_POST['rate_ksh'];
         
-        if (empty($name) || empty($sku) || $weight <= 0 || $rate <= 0) {
+        if (empty($name) || empty($sku) || $weight <= 0 || $rate < 0) {
             $error = 'Please fill all fields with valid values.';
         } else {
             try {
@@ -99,7 +99,7 @@ include '../includes/header.php';
             
             <div class="form-group">
                 <label for="rate_ksh">Rate (KSH):</label>
-                <input type="number" id="rate_ksh" name="rate_ksh" step="0.01" min="0.01" required>
+                <input type="number" id="rate_ksh" name="rate_ksh" step="0.01" min="0" required>
             </div>
         </div>
         

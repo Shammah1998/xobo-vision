@@ -34,7 +34,23 @@ $stmt = $pdo->prepare("SELECT * FROM products WHERE company_id = ? ORDER BY name
 $stmt->execute([$_SESSION['company_id']]);
 $allProducts = $stmt->fetchAll();
 
+// 1. Filter out zero-price products from $allProducts for the main catalog
+$accessoryProducts = array_filter($allProducts, function($p) { return $p['rate_ksh'] == 0; });
+$mainProducts = array_filter($allProducts, function($p) { return $p['rate_ksh'] != 0; });
 
+// 2. Find the Vision Plus Accessories product (case-insensitive)
+$visionPlusAccessories = null;
+$filteredMainProducts = [];
+foreach ($mainProducts as $product) {
+    if (strtolower(trim($product['name'])) === 'vision plus accessories') {
+        if (!$visionPlusAccessories) {
+            $visionPlusAccessories = $product;
+        }
+        // skip all 'vision plus accessories' from main list
+    } else {
+        $filteredMainProducts[] = $product;
+    }
+}
 
 // Get company statistics (for company admins)
 $companyStats = null;
@@ -457,6 +473,29 @@ include 'includes/header.php';
     background: var(--xobo-primary-hover);
 }
 
+/* Accessories Toggle Button (same as cart) */
+.details-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--xobo-primary);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 3px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin: 0 auto;
+    font-size: 1em;
+}
+.details-toggle-btn:hover {
+    background: var(--xobo-light-gray);
+    color: var(--xobo-primary-hover);
+}
+.details-toggle-btn.expanded i {
+    transform: rotate(180deg);
+}
+
 @media (max-width: 768px) {
     .catalog-header {
         flex-direction: column;
@@ -609,7 +648,7 @@ include 'includes/header.php';
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($allProducts as $product): ?>
+                        <?php foreach ($filteredMainProducts as $product): ?>
                             <tr>
                                 <td>
                                     <input type="checkbox" 
@@ -628,6 +667,88 @@ include 'includes/header.php';
                                 </td>
                             </tr>
                         <?php endforeach; ?>
+                        <?php if ($visionPlusAccessories): ?>
+                            <tr>
+                                <td>
+                                    <input type="checkbox" 
+                                           class="product-checkbox vision-plus-accessories-checkbox" 
+                                           data-product-id="<?php echo $visionPlusAccessories['id']; ?>"
+                                           data-product-name="<?php echo htmlspecialchars($visionPlusAccessories['name']); ?>"
+                                           data-product-price="<?php echo $visionPlusAccessories['rate_ksh']; ?>">
+                                </td>
+                                <td class="product-name">
+                                    <strong><?php echo htmlspecialchars($visionPlusAccessories['name']); ?></strong>
+                                </td>
+                                <td class="product-sku"><?php echo htmlspecialchars($visionPlusAccessories['sku']); ?></td>
+                                <td class="product-weight"><?php echo number_format($visionPlusAccessories['weight_kg'], 2); ?> kg</td>
+                                <td class="product-price">
+                                    <strong><?php echo formatCurrency($visionPlusAccessories['rate_ksh']); ?></strong>
+                                    <button type="button" class="details-toggle-btn accessories-toggle-btn" style="float:right;">
+                                        <i class="fas fa-chevron-down"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="accessories-dropdown-row" style="display: none;">
+                                <td colspan="5">
+                                    <div class="accessories-search-container">
+                                        <div class="search-container">
+                                            <i class="fas fa-search search-icon"></i>
+                                            <input type="text" id="accessories-search" placeholder="Search accessories..." class="search-input">
+                                            <button type="button" id="clear-accessories-search" class="clear-search" style="display: none;">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <div class="search-results-count">
+                                            <span id="accessories-search-results">All accessories</span>
+                                        </div>
+                                    </div>
+                                    <table class="catalog-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 50px;">
+                                                    <input type="checkbox" id="select-all-accessories-checkbox" title="Select all accessories">
+                                                </th>
+                                                <th>Product Name</th>
+                                                <th>SKU</th>
+                                                <th>Weight (kg)</th>
+                                                <th>Price (KSH)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($accessoryProducts as $accessory): ?>
+                                                <tr>
+                                                    <td>
+                                                        <input type="checkbox" 
+                                                               class="product-checkbox" 
+                                                               data-product-id="<?php echo $accessory['id']; ?>"
+                                                               data-product-name="<?php echo htmlspecialchars($accessory['name']); ?>"
+                                                               data-product-price="<?php echo $accessory['rate_ksh']; ?>">
+                                                    </td>
+                                                    <td class="product-name">
+                                                        <strong><?php echo htmlspecialchars($accessory['name']); ?></strong>
+                                                    </td>
+                                                    <td class="product-sku"><?php echo htmlspecialchars($accessory['sku']); ?></td>
+                                                    <td class="product-weight"><?php echo number_format($accessory['weight_kg'], 2); ?> kg</td>
+                                                    <td class="product-price">
+                                                        <strong><?php echo formatCurrency($accessory['rate_ksh']); ?></strong>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                    <div id="no-accessories-search-results" class="no-search-results" style="display: none;">
+                                        <div class="no-results-content">
+                                            <i class="fas fa-search"></i>
+                                            <h4>No accessories found</h4>
+                                            <p>Try searching with different keywords or check your spelling.</p>
+                                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('accessories-search').value=''; filterAccessories('');">
+                                                <i class="fas fa-refresh"></i> Show All Accessories
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
                     </tbody>
                 </table>
                 <div id="no-search-results" class="no-search-results" style="display: none;">
@@ -664,34 +785,39 @@ document.addEventListener('DOMContentLoaded', function() {
         let visibleCount = 0;
         const term = searchTerm.toLowerCase().trim();
         const noResultsDiv = document.getElementById('no-search-results');
-        
+        const visionPlusRow = document.querySelector('.vision-plus-accessories-checkbox')?.closest('tr');
+        const accessoriesDropdownRow = document.querySelector('.accessories-dropdown-row');
         catalogTableRows.forEach(row => {
             const productName = row.querySelector('.product-name').textContent.toLowerCase();
             const productSku = row.querySelector('.product-sku').textContent.toLowerCase();
-            
-            const isVisible = term === '' || 
-                             productName.includes(term) || 
-                             productSku.includes(term);
-            
+            let isVisible = term === '' || productName.includes(term) || productSku.includes(term);
+            // Special handling for vision plus accessories row
+            if (visionPlusRow && row === visionPlusRow) {
+                isVisible = term === '' || productName.includes(term) || productSku.includes(term);
+                row.style.display = isVisible ? '' : 'none';
+                // Also hide/show the dropdown row
+                if (accessoriesDropdownRow) {
+                    accessoriesDropdownRow.style.display = (isVisible && visionPlusRow.querySelector('.vision-plus-accessories-checkbox').checked) ? '' : 'none';
+                }
+                if (isVisible) visibleCount++;
+                return;
+            }
+            // Hide/show normal rows
             row.style.display = isVisible ? '' : 'none';
             if (isVisible) visibleCount++;
         });
-        
         // Show/hide no results message
         if (noResultsDiv) {
             noResultsDiv.style.display = (term !== '' && visibleCount === 0) ? 'flex' : 'none';
         }
-        
         // Update search results count
         if (term === '') {
             searchResultsSpan.textContent = 'All products';
         } else {
             searchResultsSpan.textContent = `${visibleCount} product${visibleCount !== 1 ? 's' : ''} found`;
         }
-        
         // Show/hide clear button
         clearSearchBtn.style.display = term === '' ? 'none' : 'block';
-        
         // Update selection after filtering
         updateSelection();
     }
@@ -786,18 +912,43 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Collect selected products
-        const selectedProducts = Array.from(checkedBoxes).map(checkbox => ({
+        // Check if Vision Plus Accessories is selected
+        const visionPlusSelected = visionPlusCheckbox && visionPlusCheckbox.checked;
+        
+        // Collect all regular products (exclude accessories from dropdown)
+        const regularProducts = Array.from(checkedBoxes).filter(checkbox => {
+            // Exclude accessories that are in the dropdown
+            return !checkbox.closest('.accessories-dropdown-row');
+        }).map(checkbox => ({
             id: checkbox.dataset.productId,
             name: checkbox.dataset.productName,
             price: parseFloat(checkbox.dataset.productPrice)
         }));
         
-        // Show confirmation
-        const productNames = selectedProducts.map(p => p.name).join('\n• ');
-        const totalPrice = selectedProducts.reduce((sum, p) => sum + p.price, 0);
+        // Collect accessories if Vision Plus is selected
+        let selectedAccessories = [];
+        if (visionPlusSelected) {
+            const accessoryCheckboxes = accessoriesRow ? accessoriesRow.querySelectorAll('.product-checkbox:checked') : [];
+            selectedAccessories = Array.from(accessoryCheckboxes).map(cb => ({
+                id: cb.dataset.productId,
+                name: cb.dataset.productName,
+                sku: cb.closest('tr').querySelector('.product-sku').textContent.trim(),
+                weight: cb.closest('tr').querySelector('.product-weight').textContent.replace(' kg', '').trim()
+            }));
+        }
         
-        const message = `Add ${selectedProducts.length} product(s) to cart?\n\n• ${productNames}\n\nTotal: KSH ${totalPrice.toLocaleString()}`;
+        // Build confirmation message
+        const productNames = regularProducts.map(p => p.name).join('\n• ');
+        const totalPrice = regularProducts.reduce((sum, p) => sum + p.price, 0);
+        
+        let message = `Add ${regularProducts.length} product(s) to cart?\n\n• ${productNames}`;
+        
+        if (visionPlusSelected && selectedAccessories.length > 0) {
+            const accessoryNames = selectedAccessories.map(a => a.name).join('\n• ');
+            message += `\n\nVision Plus Accessories includes ${selectedAccessories.length} accessories:\n• ${accessoryNames}`;
+        }
+        
+        message += `\n\nTotal: KSH ${totalPrice.toLocaleString()}`;
         
         if (confirm(message)) {
             // Create form and submit to cart
@@ -805,13 +956,23 @@ document.addEventListener('DOMContentLoaded', function() {
             form.method = 'POST';
             form.action = 'shop/cart';
             
-            selectedProducts.forEach(product => {
+            // Add all regular products (including Vision Plus Accessories as a regular product)
+            regularProducts.forEach(product => {
                 const input = document.createElement('input');
                 input.type = 'hidden';
                 input.name = 'products[]';
                 input.value = product.id;
                 form.appendChild(input);
             });
+            
+            // Add accessories as metadata if Vision Plus Accessories is selected
+            if (visionPlusSelected && selectedAccessories.length > 0) {
+                const accessoriesInput = document.createElement('input');
+                accessoriesInput.type = 'hidden';
+                accessoriesInput.name = 'accessories';
+                accessoriesInput.value = JSON.stringify(selectedAccessories);
+                form.appendChild(accessoriesInput);
+            }
             
             // Add action input
             const actionInput = document.createElement('input');
@@ -830,6 +991,77 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Make filterProducts available globally for no-results button
     window.filterProducts = filterProducts;
+
+    // Get Vision Plus Accessories checkbox reference
+    const visionPlusCheckbox = document.querySelector('.vision-plus-accessories-checkbox');
+
+    // Accessories dropdown logic
+    const accessoriesRow = document.querySelector('.accessories-dropdown-row');
+    let toggleAccessoriesDropdownBtn = document.querySelector('.accessories-toggle-btn');
+    if (accessoriesRow && toggleAccessoriesDropdownBtn) {
+        // On page load, sync icon and button state with dropdown visibility
+        const icon = toggleAccessoriesDropdownBtn.querySelector('i');
+        const isExpanded = window.getComputedStyle(accessoriesRow).display !== 'none';
+        toggleAccessoriesDropdownBtn.classList.toggle('expanded', isExpanded);
+        icon.classList.remove('fa-chevron-down', 'fa-chevron-up');
+        icon.classList.add(isExpanded ? 'fa-chevron-up' : 'fa-chevron-down');
+
+        toggleAccessoriesDropdownBtn.addEventListener('click', function() {
+            // Toggle visibility using computed style
+            const willShow = window.getComputedStyle(accessoriesRow).display === 'none';
+            accessoriesRow.style.display = willShow ? '' : 'none';
+            // Update icon based on new state
+            toggleAccessoriesDropdownBtn.classList.toggle('expanded', willShow);
+            icon.classList.remove('fa-chevron-down', 'fa-chevron-up');
+            if (willShow) {
+                icon.classList.add('fa-chevron-up');
+            } else {
+                icon.classList.add('fa-chevron-down');
+            }
+        });
+    }
+
+    // Accessories search logic
+    const accessoriesSearch = document.getElementById('accessories-search');
+    const clearAccessoriesSearchBtn = document.getElementById('clear-accessories-search');
+    const accessoriesSearchResults = document.getElementById('accessories-search-results');
+    function filterAccessories(term) {
+        let visibleCount = 0;
+        const searchTerm = (term || accessoriesSearch.value).toLowerCase().trim();
+        const noResultsDiv = document.getElementById('no-accessories-search-results');
+        // Dynamically select the rows each time
+        const rows = accessoriesRow ? accessoriesRow.querySelectorAll('tbody tr') : [];
+        rows.forEach(row => {
+            const name = row.querySelector('.product-name').textContent.toLowerCase();
+            const sku = row.querySelector('.product-sku').textContent.toLowerCase();
+            const isVisible = searchTerm === '' || name.includes(searchTerm) || sku.includes(searchTerm);
+            row.style.display = isVisible ? '' : 'none';
+            if (isVisible) visibleCount++;
+        });
+        if (noResultsDiv) {
+            noResultsDiv.style.display = (searchTerm !== '' && visibleCount === 0) ? 'flex' : 'none';
+        }
+        accessoriesSearchResults.textContent = searchTerm === '' ? 'All accessories' : `${visibleCount} accessory${visibleCount !== 1 ? 'ies' : 'y'} found`;
+        clearAccessoriesSearchBtn.style.display = searchTerm === '' ? 'none' : 'block';
+    }
+    if (accessoriesSearch) {
+        accessoriesSearch.addEventListener('input', function() { filterAccessories(); });
+    }
+    if (clearAccessoriesSearchBtn) {
+        clearAccessoriesSearchBtn.addEventListener('click', function() {
+            accessoriesSearch.value = '';
+            filterAccessories('');
+            accessoriesSearch.focus();
+        });
+    }
+    // Select all accessories
+    const selectAllAccessoriesCheckbox = document.getElementById('select-all-accessories-checkbox');
+    if (selectAllAccessoriesCheckbox && accessoriesRow) {
+        selectAllAccessoriesCheckbox.addEventListener('change', function() {
+            const accessoryCheckboxes = accessoriesRow.querySelectorAll('.product-checkbox');
+            accessoryCheckboxes.forEach(cb => { if (cb.closest('tr').style.display !== 'none') cb.checked = this.checked; });
+        });
+    }
 });
 </script>
 

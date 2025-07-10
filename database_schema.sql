@@ -117,6 +117,21 @@ CREATE TABLE order_vehicle_types (
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 );
 
+-- Order accessories (for storing accessories information with orders)
+CREATE TABLE order_accessories (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  main_product_id INT NOT NULL,
+  accessory_product_id INT NULL,
+  accessory_name VARCHAR(255) NOT NULL,
+  accessory_sku VARCHAR(100) NOT NULL,
+  accessory_weight DECIMAL(5,2) NOT NULL,
+  created_at DATETIME NOT NULL,
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+  FOREIGN KEY (main_product_id) REFERENCES products(id),
+  FOREIGN KEY (accessory_product_id) REFERENCES products(id)
+);
+
 -- Insert default super admin user
 INSERT INTO users (email, password, role) VALUES 
 ('support@xobo.co.ke', '$2y$10$7v7GGrwENRTFL850XyVl4.TYByBqqr2xmTVQPO/wBJV/dr/9RG33C', 'super_admin');

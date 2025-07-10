@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 foreach ($products as $product) {
                     if (!empty($product['name']) && !empty($product['sku']) && 
-                        !empty($product['weight_kg']) && !empty($product['rate_ksh'])) {
+                        !empty($product['weight_kg']) && isset($product['rate_ksh']) && $product['weight_kg'] > 0 && $product['rate_ksh'] >= 0) {
                         
                         $productStmt->execute([
                             $companyId,
@@ -92,7 +92,7 @@ include 'includes/admin_header.php';
         <div class="alert alert-success">
             <?php echo htmlspecialchars($message); ?>
             <div style="margin-top: 1rem;">
-                <a href="/xobo-c/admin/invite-user.php" 
+                <a href="<?php echo BASE_URL; ?>/admin/invite-user" 
                    style="display: inline-block; padding: 8px 16px; background: var(--xobo-primary); color: white; text-decoration: none; border-radius: 4px; font-size: 0.9rem;">
                     <i class="fas fa-user-plus"></i> Invite Users Now
                 </a>
@@ -548,7 +548,7 @@ document.getElementById('import-excel-btn').addEventListener('click', function()
                     const priceNum = parseFloat(price);
                     
                     if (nameStr && skuStr && !isNaN(weightNum) && !isNaN(priceNum) && 
-                        weightNum > 0 && priceNum > 0) {
+                        weightNum > 0 && priceNum >= 0) { // <-- allow price to be zero
                         addProductFromData(nameStr, skuStr, weightNum.toString(), priceNum.toString());
                         importedCount++;
                     } else {
@@ -649,7 +649,7 @@ function addProductRow(name = '', sku = '', weight = '', price = '') {
                        placeholder="0.00">
             </td>
             <td>
-                <input type="number" name="products[${productCount}][rate_ksh]" step="0.01" min="0.01" required
+                <input type="number" name="products[${productCount}][rate_ksh]" step="0.01" min="0" required
                        value="${price}"
                        style="width: 100%; padding: 8px; border: 1px solid var(--xobo-border); border-radius: 4px; font-size: 0.9rem;"
                        placeholder="0.00">
