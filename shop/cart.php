@@ -1681,4 +1681,17 @@ if (deleteBtn && cartForm) {
         cartForm.submit();
     });
 }
+
+// Require vehicle type selection before confirming order
+const confirmOrderBtn = document.getElementById('confirm-order-btn');
+if (confirmOrderBtn && cartForm) {
+    confirmOrderBtn.addEventListener('click', function(e) {
+        const vehicleType = document.getElementById('vehicle_type');
+        if (vehicleType && vehicleType.value === '') {
+            alert('Please select a vehicle type before confirming your order.');
+            vehicleType.focus();
+            e.preventDefault();
+        }
+    });
+}
 </script>

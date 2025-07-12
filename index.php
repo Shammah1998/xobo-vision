@@ -954,6 +954,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle add to cart button
     addToCartBtn.addEventListener('click', function() {
         const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
+        // Prevent proceeding if accessories are selected but Vision Plus Accessories is not checked
+        const checkedAccessoryCheckboxes = accessoriesRow ? accessoriesRow.querySelectorAll('.product-checkbox:checked') : [];
+        if (checkedAccessoryCheckboxes.length > 0 && (!visionPlusCheckbox || !visionPlusCheckbox.checked)) {
+            alert('You must select the "Vision Plus Accessories" box. This is because you have selected items to be included in the box.');
+            return;
+        }
         
         if (checkedBoxes.length === 0) {
             alert('Please select at least one product to add to cart.');
