@@ -64,26 +64,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (isset($_POST['save_delivery_details'])) {
         // Handle saving delivery details
         $productId = (int)$_POST['product_id'];
-        $destination = sanitize($_POST['destination'] ?? '');
-        $companyName = sanitize($_POST['company_name'] ?? '');
-        $companyAddress = sanitize($_POST['company_address'] ?? '');
+        $pickUp = sanitize($_POST['destination'] ?? '');
+        $dropOff = sanitize($_POST['company_name'] ?? '');
+        $additionalNotes = sanitize($_POST['company_address'] ?? '');
         $recipientName = sanitize($_POST['recipient_name'] ?? '');
         $recipientPhone = sanitize($_POST['recipient_phone'] ?? '');
         
         // Require both destination and company name
-        if (!empty($destination) && !empty($companyName)) {
-            $stmt = $pdo->prepare("INSERT INTO delivery_details (user_id, product_id, session_id, destination, company_name, company_address, recipient_name, recipient_phone) 
+        if (!empty($pickUp) && !empty($dropOff)) {
+            $stmt = $pdo->prepare("INSERT INTO delivery_details (user_id, product_id, session_id, pick_up, drop_off, additional_notes, recipient_name, recipient_phone) 
                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
                                    ON DUPLICATE KEY UPDATE 
-                                   destination = VALUES(destination), 
-                                   company_name = VALUES(company_name), 
-                                   company_address = VALUES(company_address), 
+                                   pick_up = VALUES(pick_up), 
+                                   drop_off = VALUES(drop_off), 
+                                   additional_notes = VALUES(additional_notes), 
                                    recipient_name = VALUES(recipient_name), 
                                    recipient_phone = VALUES(recipient_phone),
                                    updated_at = CURRENT_TIMESTAMP");
-            $stmt->execute([$userId, $productId, session_id(), $destination, $companyName, $companyAddress, $recipientName, $recipientPhone]);
+            $stmt->execute([$userId, $productId, session_id(), $pickUp, $dropOff, $additionalNotes, $recipientName, $recipientPhone]);
             $message = "Delivery details saved successfully!";
-        } else if (empty($destination) && empty($companyName) && empty($companyAddress) && empty($recipientName) && empty($recipientPhone)) {
+        } else if (empty($pickUp) && empty($dropOff) && empty($additionalNotes) && empty($recipientName) && empty($recipientPhone)) {
             // Delete if all fields are empty
             $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND product_id = ? AND session_id = ?");
             $stmt->execute([$userId, $productId, session_id()]);
@@ -99,39 +99,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = "Delivery details deleted successfully!";
     } elseif (isset($_POST['fill_all'])) {
         // Handle Fill All Delivery Details for all cart items
-        $destination = sanitize($_POST['destination'] ?? '');
-        $companyName = sanitize($_POST['company_name'] ?? '');
-        $companyAddress = sanitize($_POST['company_address'] ?? '');
+        $pickUp = sanitize($_POST['destination'] ?? '');
+        $dropOff = sanitize($_POST['company_name'] ?? '');
+        $additionalNotes = sanitize($_POST['company_address'] ?? '');
         $recipientName = sanitize($_POST['recipient_name'] ?? '');
         $recipientPhone = sanitize($_POST['recipient_phone'] ?? '');
-
-        if (!empty($destination) && !empty($companyName)) {
+        
+        if (!empty($pickUp) && !empty($dropOff)) {
             if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
-                $productIds = array_keys($_SESSION['cart']);
-                $stmt = $pdo->prepare("INSERT INTO delivery_details (user_id, product_id, session_id, destination, company_name, company_address, recipient_name, recipient_phone, created_at, updated_at)
-                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-                                       ON DUPLICATE KEY UPDATE
-                                       destination = VALUES(destination),
-                                       company_name = VALUES(company_name),
-                                       company_address = VALUES(company_address),
-                                       recipient_name = VALUES(recipient_name),
-                                       recipient_phone = VALUES(recipient_phone),
-                                       updated_at = NOW()");
-                foreach ($productIds as $productId) {
+                    $productIds = array_keys($_SESSION['cart']);
+                $stmt = $pdo->prepare("INSERT INTO delivery_details (user_id, product_id, session_id, pick_up, drop_off, additional_notes, recipient_name, recipient_phone, created_at, updated_at)
+                                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) 
+                                           ON DUPLICATE KEY UPDATE 
+                                       pick_up = VALUES(pick_up),
+                                       drop_off = VALUES(drop_off),
+                                       additional_notes = VALUES(additional_notes),
+                                           recipient_name = VALUES(recipient_name), 
+                                           recipient_phone = VALUES(recipient_phone),
+                                           updated_at = NOW()");
+                    foreach ($productIds as $productId) {
                     $stmt->execute([
-                        $userId,
-                        (int)$productId,
-                        session_id(),
-                        $destination,
-                        $companyName,
-                        $companyAddress,
-                        $recipientName,
-                        $recipientPhone
-                    ]);
+                                $userId, 
+                                (int)$productId, 
+                                session_id(), 
+                        $pickUp,
+                        $dropOff,
+                        $additionalNotes,
+                                $recipientName, 
+                                $recipientPhone
+                            ]);
                 }
                 // After updating, reload the page to show updated details
                 header('Location: ' . $_SERVER['REQUEST_URI']);
-                exit;
+                            exit;
             } else {
                 $error = "Your cart is empty. Cannot apply delivery details.";
             }
@@ -177,6 +177,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Redirect to cart page to avoid resubmission
         header('Location: ' . $_SERVER['REQUEST_URI']);
         exit;
+    } elseif (isset($_POST['confirm_order'])) {
+        // Confirm order: create order, save items, delivery details, clear cart, redirect
+        if (!isset($_SESSION['cart']) || empty($_SESSION['cart'])) {
+            $error = 'Your cart is empty.';
+        } else {
+            $pdo->beginTransaction();
+            try {
+                // Calculate total
+                $totalKsh = 0;
+                foreach ($_SESSION['cart'] as $productId => $qty) {
+                    $stmt = $pdo->prepare('SELECT rate_ksh FROM products WHERE id = ? AND company_id = ?');
+                    $stmt->execute([$productId, $companyId]);
+                    $product = $stmt->fetch();
+                    if ($product) {
+                        $totalKsh += $product['rate_ksh'] * $qty;
+                    }
+                }
+                // Insert order
+                $stmt = $pdo->prepare('INSERT INTO orders (user_id, company_id, total_ksh, created_at) VALUES (?, ?, ?, NOW())');
+                $stmt->execute([$userId, $companyId, $totalKsh]);
+                $orderId = $pdo->lastInsertId();
+                // Insert order items
+                foreach ($_SESSION['cart'] as $productId => $qty) {
+                    $stmt = $pdo->prepare('SELECT rate_ksh FROM products WHERE id = ? AND company_id = ?');
+                    $stmt->execute([$productId, $companyId]);
+                    $product = $stmt->fetch();
+                    $lineTotal = $product ? $product['rate_ksh'] * $qty : 0;
+                    $stmt = $pdo->prepare('INSERT INTO order_items (order_id, product_id, quantity, line_total) VALUES (?, ?, ?, ?)');
+                    $stmt->execute([$orderId, $productId, $qty, $lineTotal]);
+                }
+                // Insert delivery details for each product
+                $stmt = $pdo->prepare('SELECT * FROM delivery_details WHERE user_id = ? AND session_id = ?');
+                $stmt->execute([$userId, session_id()]);
+                $deliveryRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($deliveryRows as $row) {
+                    $stmt2 = $pdo->prepare('INSERT INTO order_delivery_details (order_id, product_id, pick_up, drop_off, additional_notes, recipient_name, recipient_phone, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())');
+                    $stmt2->execute([
+                        $orderId,
+                        $row['product_id'],
+                        $row['pick_up'],
+                        $row['drop_off'],
+                        $row['additional_notes'],
+                        $row['recipient_name'],
+                        $row['recipient_phone']
+                    ]);
+                }
+                
+                // Insert accessories for each product that has them
+                if (!empty($_SESSION['cart_accessories'])) {
+                    foreach ($_SESSION['cart_accessories'] as $mainProductId => $accessories) {
+                        foreach ($accessories as $accessory) {
+                            $stmt3 = $pdo->prepare('INSERT INTO order_accessories (order_id, main_product_id, accessory_product_id, accessory_name, accessory_sku, accessory_weight, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())');
+                            $stmt3->execute([
+                                $orderId,
+                                (int)$mainProductId,
+                                isset($accessory['id']) ? (int)$accessory['id'] : null,
+                                $accessory['name'] ?? '',
+                                $accessory['sku'] ?? '',
+                                (float)($accessory['weight'] ?? 0)
+                            ]);
+                        }
+                    }
+                }
+                
+                // Clear cart and delivery details
+                unset($_SESSION['cart']);
+                unset($_SESSION['cart_accessories']);
+                $stmt = $pdo->prepare('DELETE FROM delivery_details WHERE user_id = ? AND session_id = ?');
+                $stmt->execute([$userId, session_id()]);
+                $pdo->commit();
+                // Redirect to order receipt
+                header('Location: order-receipt.php?order_id=' . $orderId);
+                exit;
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $error = 'Order could not be completed. Please try again.';
+            }
+        }
     }
 }
 
@@ -1177,21 +1255,21 @@ include '../includes/header.php';
                         <div class="delivery-form-grid">
                             <div class="form-group">
                                 <label for="fill_all_destination">
-                                    <i class="fas fa-map-marker-alt"></i> Destination <span class="required-star">*</span>
+                                    <i class="fas fa-map-marker-alt"></i> Pick Up <span class="required-star">*</span>
                                 </label>
-                                <input type="text" id="fill_all_destination" name="destination" placeholder="Where are these items going?" required>
+                                <input type="text" id="fill_all_destination" name="destination" placeholder="Where is the pick up?" required>
                             </div>
                             <div class="form-group">
                                 <label for="fill_all_company_name">
-                                    <i class="fas fa-building"></i> Company Name <span class="required-star">*</span>
+                                    <i class="fas fa-building"></i> Drop Off <span class="required-star">*</span>
                                 </label>
-                                <input type="text" id="fill_all_company_name" name="company_name" placeholder="Receiving company name" required>
+                                <input type="text" id="fill_all_company_name" name="company_name" placeholder="Where is the drop off?" required>
                             </div>
                             <div class="form-group full-width">
                                 <label for="fill_all_company_address">
-                                    <i class="fas fa-map"></i> Company Address
+                                    <i class="fas fa-map"></i> Additional Notes
                                 </label>
-                                <textarea id="fill_all_company_address" name="company_address" rows="2" placeholder="Full delivery address"></textarea>
+                                <textarea id="fill_all_company_address" name="company_address" rows="2" placeholder="Any additional notes"></textarea>
                             </div>
                             <div class="form-group">
                                 <label for="fill_all_recipient_name">
@@ -1334,29 +1412,29 @@ include '../includes/header.php';
                                             <div class="delivery-form-grid">
                                                 <div class="form-group">
                                                     <label for="destination_<?php echo $item['product']['id']; ?>">
-                                                        <i class="fas fa-map-marker-alt"></i> Destination <span class="required-star">*</span>
+                                                        <i class="fas fa-map-marker-alt"></i> Pick Up <span class="required-star">*</span>
                                                     </label>
                                                     <input type="text" id="destination_<?php echo $item['product']['id']; ?>" 
-                                                           name="destination" placeholder="Where is this item going?"
-                                                           value="<?php echo htmlspecialchars($item['delivery_details']['destination'] ?? ''); ?>" required>
+                                                           name="destination" placeholder="Where is the pick up?"
+                                                           value="<?php echo htmlspecialchars($item['delivery_details']['pick_up'] ?? ''); ?>" required>
                                                 </div>
                                                 
                                                 <div class="form-group">
                                                     <label for="company_name_<?php echo $item['product']['id']; ?>">
-                                                        <i class="fas fa-building"></i> Company Name <span class="required-star">*</span>
+                                                        <i class="fas fa-building"></i> Drop Off <span class="required-star">*</span>
                                                     </label>
                                                     <input type="text" id="company_name_<?php echo $item['product']['id']; ?>" 
-                                                           name="company_name" placeholder="Receiving company name"
-                                                           value="<?php echo htmlspecialchars($item['delivery_details']['company_name'] ?? ''); ?>" required>
+                                                           name="company_name" placeholder="Where is the drop off?"
+                                                           value="<?php echo htmlspecialchars($item['delivery_details']['drop_off'] ?? ''); ?>" required>
                                                 </div>
                                                 
                                                 <div class="form-group full-width">
                                                     <label for="company_address_<?php echo $item['product']['id']; ?>">
-                                                        <i class="fas fa-map"></i> Company Address
+                                                        <i class="fas fa-map"></i> Additional Notes
                                                     </label>
                                                     <textarea id="company_address_<?php echo $item['product']['id']; ?>" 
                                                               name="company_address" rows="2" 
-                                                              placeholder="Full delivery address"><?php echo htmlspecialchars($item['delivery_details']['company_address'] ?? ''); ?></textarea>
+                                                              placeholder="Any additional notes"><?php echo htmlspecialchars($item['delivery_details']['additional_notes'] ?? ''); ?></textarea>
                                                 </div>
                                                 
                                                 <div class="form-group">
@@ -1527,15 +1605,15 @@ const fillAllDropdown = document.getElementById('fill-all-dropdown');
 const cancelFillAllDropdown = document.getElementById('cancel-fill-all-dropdown');
 const fillAllArrow = document.getElementById('fill-all-arrow');
 if (fillAllBtn && fillAllDropdown && fillAllArrow) {
-    fillAllBtn.addEventListener('click', function() {
+        fillAllBtn.addEventListener('click', function() {
         const isOpen = fillAllDropdown.style.display === 'block';
         fillAllDropdown.style.display = isOpen ? 'none' : 'block';
         fillAllArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
         if (!isOpen) {
             fillAllDropdown.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-    });
-}
+            }
+        });
+    }
 if (cancelFillAllDropdown && fillAllDropdown && fillAllArrow) {
     cancelFillAllDropdown.addEventListener('click', function() {
         fillAllDropdown.style.display = 'none';
@@ -1603,4 +1681,4 @@ if (deleteBtn && cartForm) {
         cartForm.submit();
     });
 }
-</script> 
+</script>

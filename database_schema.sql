@@ -136,3 +136,13 @@ CREATE TABLE order_accessories (
 INSERT INTO users (email, password, role) VALUES 
 ('support@xobo.co.ke', '$2y$10$7v7GGrwENRTFL850XyVl4.TYByBqqr2xmTVQPO/wBJV/dr/9RG33C', 'super_admin');
 -- Default password is 'Xobo@2025' - change this in production! 
+
+-- ALTER TABLE statements to rename columns in delivery_details:
+ALTER TABLE delivery_details CHANGE destination pick_up VARCHAR(500) NULL;
+ALTER TABLE delivery_details CHANGE company_name drop_off VARCHAR(255) NULL;
+ALTER TABLE delivery_details CHANGE company_address additional_notes TEXT NULL;
+
+-- ALTER TABLE statements to rename columns in order_delivery_details:
+ALTER TABLE order_delivery_details CHANGE destination pick_up VARCHAR(500) NULL;
+ALTER TABLE order_delivery_details CHANGE company_name drop_off VARCHAR(255) NULL;
+ALTER TABLE order_delivery_details CHANGE company_address additional_notes TEXT NULL; 

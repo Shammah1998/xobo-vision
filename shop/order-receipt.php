@@ -392,9 +392,9 @@ $tabTitle = (isAdmin($pdo) || $role === 'company_admin') ? 'Admin Panel' : 'User
                 <thead>
                     <tr>
                         <th>Product</th>
-                        <th>Destination</th>
-                        <th>Company</th>
-                        <th>Address</th>
+                        <th>Pick Up</th>
+                        <th>Drop Off</th>
+                        <th>Additional Notes</th>
                         <th>Recipient</th>
                         <th>Phone</th>
                     </tr>
@@ -405,9 +405,9 @@ $tabTitle = (isAdmin($pdo) || $role === 'company_admin') ? 'Admin Panel' : 'User
                             $delivery = $deliveryByProduct[$item['product_id']]; ?>
                             <tr>
                                 <td class="product-name"><?php echo htmlspecialchars($item['name']); ?></td>
-                                <td><?php echo htmlspecialchars($delivery['destination'] ?? '-'); ?></td>
-                                <td><?php echo htmlspecialchars($delivery['company_name'] ?? '-'); ?></td>
-                                <td><?php echo htmlspecialchars($delivery['company_address'] ?? '-'); ?></td>
+                                <td><?php echo htmlspecialchars($delivery['pick_up'] ?? '-'); ?></td>
+                                <td><?php echo htmlspecialchars($delivery['drop_off'] ?? '-'); ?></td>
+                                <td><?php echo htmlspecialchars($delivery['additional_notes'] ?? '-'); ?></td>
                                 <td><?php echo htmlspecialchars($delivery['recipient_name'] ?? '-'); ?></td>
                                 <td><?php echo htmlspecialchars($delivery['recipient_phone'] ?? '-'); ?></td>
                             </tr>
@@ -880,7 +880,7 @@ $tabTitle = (isAdmin($pdo) || $role === 'company_admin') ? 'Admin Panel' : 'User
             
             if (hasDeliveryData) {
                 // Delivery table headers
-                const deliveryHeaders = ['Product', 'Destination', 'Company', 'Address', 'Recipient', 'Phone'];
+                const deliveryHeaders = ['Product', 'Pick Up', 'Drop Off', 'Additional Notes', 'Recipient', 'Phone'];
                 const deliveryColWidths = [
                     contentWidth * 0.2, contentWidth * 0.15, contentWidth * 0.2, 
                     contentWidth * 0.2, contentWidth * 0.15, contentWidth * 0.1
@@ -923,9 +923,9 @@ $tabTitle = (isAdmin($pdo) || $role === 'company_admin') ? 'Admin Panel' : 'User
                         xPos = margin;
                         const deliveryData = [
                             item.name,
-                            delivery.destination || '-',
-                            delivery.company_name || '-', 
-                            delivery.company_address || '-',
+                            delivery.pick_up || '-',
+                            delivery.drop_off || '-',
+                            delivery.additional_notes || '-',
                             delivery.recipient_name || '-',
                             delivery.recipient_phone || '-'
                         ];
