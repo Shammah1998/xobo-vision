@@ -31,6 +31,18 @@ $stmt = $pdo->prepare("
 $stmt->execute([$companyId]);
 $db_orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Fetch drivers for these orders
+$orderIds = array_column($db_orders, 'id');
+$driversByOrder = [];
+if (!empty($orderIds)) {
+    $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+    $stmt_drivers = $pdo->prepare("SELECT order_id, driver_name FROM drivers WHERE order_id IN ($placeholders)");
+    $stmt_drivers->execute($orderIds);
+    foreach ($stmt_drivers->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $driversByOrder[$row['order_id']] = $row['driver_name'];
+    }
+}
+
 $orders = [];
 if (!empty($db_orders)) {
     $orderIds = array_column($db_orders, 'id');
@@ -130,7 +142,8 @@ if (!empty($db_orders)) {
             'user_email' => htmlspecialchars($db_order['user_email']),
             'created_at' => $db_order['created_at'],
             'delivery_html' => $delivery_html,
-            'items' => $items_str ?: 'No items found for this order.'
+            'items' => $items_str ?: 'No items found for this order.',
+            'driver' => isset($driversByOrder[$order_id]) ? htmlspecialchars($driversByOrder[$order_id]) : 'Not assigned',
         ];
     }
 }
@@ -174,11 +187,13 @@ include '../includes/header.php';
                             <th class="items-col">Items</th>
                             <th class="total-col">Total (KSH)</th>
                             <th class="address-col">Delivery Address</th>
+                            <th class="driver-col">Driver</th>
                             <th class="receipt-col">Receipt</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($orders as $order): ?>
+                        <?php foreach (
+                            $orders as $order): ?>
                             <tr>
                                 <td class="order-id-col">#<?php echo str_pad($order['id'], 6, '0', STR_PAD_LEFT); ?></td>
                                 <td class="date-col"><?php echo date('M j, Y H:i', strtotime($order['created_at'])); ?></td>
@@ -193,6 +208,9 @@ include '../includes/header.php';
                                     <div class="address-text">
                                         <?php echo $order['delivery_html']; ?>
                                     </div>
+                                </td>
+                                <td class="driver-col">
+                                    <?php echo $order['driver']; ?>
                                 </td>
                                 <td class="receipt-col">
                                     <a href="<?php echo BASE_URL; ?>/shop/order-receipt?order_id=<?php echo $order['id']; ?>" class="btn-receipt-long-narrow">
@@ -447,6 +465,8 @@ include '../includes/header.php';
     background: var(--xobo-primary-hover);
     color: #fff;
 }
+/* Add driver-col style */
+.driver-col { min-width: 150px; }
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
