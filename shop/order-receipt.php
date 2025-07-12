@@ -667,32 +667,37 @@ $tabTitle = (isAdmin($pdo) || $role === 'company_admin') ? 'Admin Panel' : 'User
             pdf.setFillColor(colors.primary);
             pdf.rect(0, 0, pageWidth, 35, 'F');
             
+            // Define consistent vertical alignment position
+            const textBaselineY = 20;
+            const logoHeight = 20; // Slightly reduced for better proportion
+            const logoY = textBaselineY - (logoHeight / 2); // Center the logo with the text
+            
             // Load and embed XOBO logo
             try {
                 const logoBase64 = await loadImageAsBase64('../assets/images/xobo-logo-white.png');
-                pdf.addImage(logoBase64, 'PNG', 15, 6, 45, 22); // x, y, width, height - fixed aspect ratio
+                pdf.addImage(logoBase64, 'PNG', 15, logoY, 40, logoHeight); // x, y, width, height - aligned with text
             } catch (error) {
                 console.log('Logo loading failed, using text fallback');
-                // Fallback to text logo
+                // Fallback to text logo - aligned with same baseline
                 pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(24);
+                pdf.setFontSize(20);
                 pdf.setTextColor(255, 255, 255);
-                pdf.text('XOBO', 15, 20);
+                pdf.text('XOBO', 15, textBaselineY);
             }
             
-            // Receipt title (centered)
+            // Receipt title (centered) 
             pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(18);
+            pdf.setFontSize(12);
             pdf.setTextColor(255, 255, 255);
             const title = 'DELIVERY RECEIPT';
-            const titleWidth = pdf.getStringUnitWidth(title) * 18 / pdf.internal.scaleFactor;
-            pdf.text(title, (pageWidth - titleWidth) / 2, 20);
+            const titleWidth = pdf.getStringUnitWidth(title) * 12 / pdf.internal.scaleFactor;
+            pdf.text(title, (pageWidth - titleWidth) / 2, textBaselineY);
             
             // Date (right aligned)
             pdf.setFontSize(12);
             const receiptDate = '<?php echo date("M d, Y H:i", strtotime($order["created_at"])); ?>';
             const dateWidth = pdf.getStringUnitWidth(receiptDate) * 12 / pdf.internal.scaleFactor;
-            pdf.text(receiptDate, pageWidth - 15 - dateWidth, 20);
+            pdf.text(receiptDate, pageWidth - 15 - dateWidth, textBaselineY);
             
             return 45; // Return new Y position
         }
@@ -798,43 +803,53 @@ $tabTitle = (isAdmin($pdo) || $role === 'company_admin') ? 'Admin Panel' : 'User
                 if (item.name.toLowerCase().trim() === 'vision plus accessories' && orderAccessories[item.product_id]) {
                     // Accessories background
                     pdf.setFillColor(248, 249, 250);
-                    pdf.rect(margin, yPos, contentWidth, 2, 'F');
-                    yPos += 3;
+                    pdf.rect(margin, yPos, contentWidth, 3, 'F');
+                    yPos += 5;
                     
                     // Accessories header
                     pdf.setFont('helvetica', 'bold');
                     pdf.setFontSize(9);
                     pdf.setTextColor(colors.text);
                     pdf.text('Included Accessories:', margin + 10, yPos + 3);
-                    yPos += 8;
+                    yPos += 10;
                     
-                    // Accessories list
+                    // Accessories list with improved spacing and layout
                     pdf.setFont('helvetica', 'normal');
-                    pdf.setFontSize(8.5);
-                    pdf.setTextColor(colors.text);
+                    pdf.setFontSize(9); // Slightly larger font for better readability
                     
-                    orderAccessories[item.product_id].forEach(accessory => {
-                        if (yPos > pageHeight - 30) {
+                    orderAccessories[item.product_id].forEach((accessory, index) => {
+                        // Check if we need a new page before adding each accessory
+                        if (yPos > pageHeight - 40) {
                             pdf.addPage();
                             yPos = margin + 20;
                         }
                         
-                        // Accessory name with proper contrast
+                        // Accessory name with bullet point
                         pdf.setTextColor(colors.text);
-                        pdf.text(`- ${accessory.accessory_name}`, margin + 15, yPos + 3);
+                        const bulletText = `• ${accessory.accessory_name}`;
+                        pdf.text(bulletText, margin + 15, yPos + 4);
                         
-                        // SKU with medium contrast but still readable
+                        // Calculate dynamic positioning for SKU and weight to avoid overlap
+                        const nameWidth = pdf.getStringUnitWidth(bulletText) * 9 / pdf.internal.scaleFactor;
+                        const skuStartX = Math.max(margin + 15 + nameWidth + 10, margin + 90); // Minimum distance or flexible spacing
+                        
+                        // SKU with better contrast and positioning
                         pdf.setTextColor(colors.secondary);
-                        pdf.text(`SKU: ${accessory.accessory_sku}`, margin + 80, yPos + 3);
+                        const skuText = `SKU: ${accessory.accessory_sku}`;
+                        pdf.text(skuText, skuStartX, yPos + 4);
                         
-                        // Weight with medium contrast
+                        // Weight (right aligned with sufficient margin)
                         pdf.setTextColor(colors.secondary);
-                        pdf.text(`${parseFloat(accessory.accessory_weight).toFixed(2)} kg`, margin + contentWidth - 25, yPos + 3);
+                        const weightText = `${parseFloat(accessory.accessory_weight).toFixed(2)} kg`;
+                        const weightWidth = pdf.getStringUnitWidth(weightText) * 9 / pdf.internal.scaleFactor;
+                        pdf.text(weightText, margin + contentWidth - weightWidth - 5, yPos + 4);
                         
-                        yPos += 6;
+                        // Increased line spacing for better readability
+                        yPos += 9;
                     });
                     
-                    yPos += 5;
+                    // Add extra spacing after accessories section
+                    yPos += 8;
                 }
                 
                 // Row border

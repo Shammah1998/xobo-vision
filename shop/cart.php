@@ -97,138 +97,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND product_id = ? AND session_id = ?");
         $stmt->execute([$userId, $productId, session_id()]);
         $message = "Delivery details deleted successfully!";
-    } elseif (isset($_POST['confirm_order'])) {
-        // Handle order confirmation - save everything to database
-        if (empty($_SESSION['cart'])) {
-            $error = "Your cart is empty!";
-        } else {
-            try {
-                // Create order_accessories table if it doesn't exist and accessories are present
-                if (!empty($_SESSION['cart_accessories'])) {
-                    $pdo->exec("CREATE TABLE IF NOT EXISTS order_accessories (
-                        id INT AUTO_INCREMENT PRIMARY KEY,
-                        order_id INT NOT NULL,
-                        main_product_id INT NOT NULL,
-                        accessory_product_id INT NULL,
-                        accessory_name VARCHAR(255) NOT NULL,
-                        accessory_sku VARCHAR(100) NOT NULL,
-                        accessory_weight DECIMAL(5,2) NOT NULL,
-                        created_at DATETIME NOT NULL,
-                        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-                        FOREIGN KEY (main_product_id) REFERENCES products(id),
-                        FOREIGN KEY (accessory_product_id) REFERENCES products(id)
-                    )");
-                }
-                
-                $pdo->beginTransaction();
-                
-                // Calculate total cost
+    } elseif (isset($_POST['fill_all'])) {
+        // Handle Fill All Delivery Details for all cart items
+        $destination = sanitize($_POST['destination'] ?? '');
+        $companyName = sanitize($_POST['company_name'] ?? '');
+        $companyAddress = sanitize($_POST['company_address'] ?? '');
+        $recipientName = sanitize($_POST['recipient_name'] ?? '');
+        $recipientPhone = sanitize($_POST['recipient_phone'] ?? '');
+
+        if (!empty($destination) && !empty($companyName)) {
+            if (isset($_SESSION['cart']) && !empty($_SESSION['cart'])) {
                 $productIds = array_keys($_SESSION['cart']);
-                $placeholders = str_repeat('?,', count($productIds) - 1) . '?';
-                
-                $stmt = $pdo->prepare("SELECT * FROM products WHERE id IN ($placeholders) AND company_id = ?");
-                $stmt->execute(array_merge($productIds, [$companyId]));
-                $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                $totalCost = 0;
-                $orderItems = [];
-                
-                foreach ($products as $product) {
-                    $quantity = $_SESSION['cart'][$product['id']];
-                    $lineTotal = $quantity * $product['rate_ksh'];
-                    $totalCost += $lineTotal;
-                    
-                    $orderItems[] = [
-                        'product_id' => $product['id'],
-                        'quantity' => $quantity,
-                        'line_total' => $lineTotal
-                    ];
-                }
-                
-                // Insert main order
-                $stmt = $pdo->prepare("INSERT INTO orders (user_id, company_id, total_ksh, created_at) VALUES (?, ?, ?, NOW())");
-                $stmt->execute([$userId, $companyId, $totalCost]);
-                $orderId = $pdo->lastInsertId();
-                
-                // Insert vehicle type for this order
-                $vehicleType = $_POST['vehicle_type'] ?? null;
-                if ($vehicleType && $orderId) {
-                    $stmt = $pdo->prepare("INSERT INTO order_vehicle_types (order_id, vehicle_type) VALUES (?, ?)");
-                    $stmt->execute([$orderId, $vehicleType]);
-                }
-                
-                // Insert order items
-                $stmt = $pdo->prepare("INSERT INTO order_items (order_id, product_id, quantity, line_total) VALUES (?, ?, ?, ?)");
-                foreach ($orderItems as $item) {
-                    $stmt->execute([$orderId, $item['product_id'], $item['quantity'], $item['line_total']]);
-                }
-                
-                // Save accessories information if any exist
-                if (!empty($_SESSION['cart_accessories'])) {
-                    $stmt = $pdo->prepare("INSERT INTO order_accessories (order_id, main_product_id, accessory_product_id, accessory_name, accessory_sku, accessory_weight, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-                    foreach ($_SESSION['cart_accessories'] as $mainProductId => $accessories) {
-                        // Only save accessories for products that are actually in this order
-                        if (isset($_SESSION['cart'][$mainProductId])) {
-                            // Check if the main product is 'vision plus accessories'
-                            $productStmt = $pdo->prepare("SELECT name FROM products WHERE id = ?");
-                            $productStmt->execute([$mainProductId]);
-                            $productName = $productStmt->fetchColumn();
-                            
-                            // Only save accessories if the main product is 'vision plus accessories'
-                            if (strtolower(trim($productName)) === 'vision plus accessories') {
-                                foreach ($accessories as $accessory) {
-                                    $stmt->execute([
-                                        $orderId,
-                                        $mainProductId,
-                                        $accessory['id'] ?? null,
-                                        $accessory['name'],
-                                        $accessory['sku'],
-                                        floatval(str_replace(' kg', '', $accessory['weight']))
-                                    ]);
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Get delivery details and save them to order_delivery_details
-                $stmt = $pdo->prepare("SELECT * FROM delivery_details WHERE user_id = ? AND product_id IN ($placeholders) AND session_id = ?");
-                $stmt->execute(array_merge([$userId], $productIds, [session_id()]));
-                $deliveryDetails = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                
-                // Insert delivery details for the order
-                $stmt = $pdo->prepare("INSERT INTO order_delivery_details (order_id, product_id, destination, company_name, company_address, recipient_name, recipient_phone) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                foreach ($deliveryDetails as $detail) {
+                $stmt = $pdo->prepare("INSERT INTO delivery_details (user_id, product_id, session_id, destination, company_name, company_address, recipient_name, recipient_phone, created_at, updated_at)
+                                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+                                       ON DUPLICATE KEY UPDATE
+                                       destination = VALUES(destination),
+                                       company_name = VALUES(company_name),
+                                       company_address = VALUES(company_address),
+                                       recipient_name = VALUES(recipient_name),
+                                       recipient_phone = VALUES(recipient_phone),
+                                       updated_at = NOW()");
+                foreach ($productIds as $productId) {
                     $stmt->execute([
-                        $orderId,
-                        $detail['product_id'],
-                        $detail['destination'],
-                        $detail['company_name'],
-                        $detail['company_address'],
-                        $detail['recipient_name'],
-                        $detail['recipient_phone']
+                        $userId,
+                        (int)$productId,
+                        session_id(),
+                        $destination,
+                        $companyName,
+                        $companyAddress,
+                        $recipientName,
+                        $recipientPhone
                     ]);
                 }
-                
-                // Clean up cart and delivery details
-                $_SESSION['cart'] = [];
-                $_SESSION['cart_accessories'] = [];
-                $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND session_id = ?");
-                $stmt->execute([$userId, session_id()]);
-                
-                $pdo->commit();
-                
-                // Redirect to receipt page
-                header("Location: order-receipt?order_id=" . $orderId);
+                // After updating, reload the page to show updated details
+                header('Location: ' . $_SERVER['REQUEST_URI']);
                 exit;
-                
-            } catch (Exception $e) {
-                // Only rollback if there's an active transaction
-                if ($pdo->inTransaction()) {
-                    $pdo->rollBack();
-                }
-                $error = "Failed to process order. Please try again. Error: " . $e->getMessage();
+            } else {
+                $error = "Your cart is empty. Cannot apply delivery details.";
             }
+        } else {
+            $error = "Please fill in both Destination and Company Name to apply to all items.";
         }
     } elseif (isset($_POST['action']) && $_POST['action'] === 'add_multiple' && isset($_POST['products'])) {
         // Handle bulk adding of products from index.php
@@ -238,7 +146,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!isset($_SESSION['cart_accessories'])) {
             $_SESSION['cart_accessories'] = [];
         }
-        
         $addedCount = 0;
         foreach ($_POST['products'] as $productId) {
             $productId = (int)$productId;
@@ -247,7 +154,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $pdo->prepare("SELECT id FROM products WHERE id = ? AND company_id = ?");
                 $stmt->execute([$productId, $companyId]);
                 if ($stmt->fetch()) {
-                    $_SESSION['cart'][$productId] = ($_SESSION['cart'][$productId] ?? 0) + 1;
+                    // Only add if not already in cart, otherwise keep existing quantity
+                    if (!isset($_SESSION['cart'][$productId])) {
+                        $_SESSION['cart'][$productId] = 1;
+                    }
                     $addedCount++;
                     // If accessories are posted, store them
                     if (isset($_POST['accessories'])) {
@@ -259,12 +169,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
-        
         if ($addedCount > 0) {
             $message = "Successfully added {$addedCount} product(s) to your cart!";
         } else {
             $error = "No valid products were added to cart.";
         }
+        // Redirect to cart page to avoid resubmission
+        header('Location: ' . $_SERVER['REQUEST_URI']);
+        exit;
     }
 }
 
@@ -844,6 +756,18 @@ include '../includes/header.php';
     .cart-controls {
         flex-direction: column;
         text-align: center;
+        gap: 1rem;
+    }
+    
+    .cart-controls-right {
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+    }
+    
+    .cart-controls-right .btn {
+        width: 100%;
+        justify-content: center;
     }
     
     .totals-content {
@@ -961,6 +885,233 @@ include '../includes/header.php';
     margin-left: 2px;
     vertical-align: middle;
 }
+
+/* Fill All Delivery Details Modal Styles */
+.fill-all-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
+
+.fill-all-modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.fill-all-modal-header {
+    background: linear-gradient(135deg, var(--xobo-primary) 0%, var(--xobo-primary-hover) 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    border-radius: 8px 8px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fill-all-modal-header h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.fill-all-modal-body {
+    padding: 2rem;
+}
+
+.fill-all-description {
+    background: #f8f9fa;
+    border-left: 4px solid var(--xobo-primary);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0 4px 4px 0;
+}
+
+.fill-all-description p {
+    margin: 0;
+    color: var(--xobo-gray);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.fill-all-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.fill-all-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.fill-all-form-group.full-width {
+    grid-column: span 2;
+}
+
+.fill-all-form-group label {
+    font-weight: 600;
+    color: var(--xobo-primary);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fill-all-form-group input,
+.fill-all-form-group textarea {
+    padding: 0.75rem;
+    border: 2px solid #e1e5e9;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.3s;
+    background: white;
+}
+
+.fill-all-form-group input:focus,
+.fill-all-form-group textarea:focus {
+    border-color: var(--xobo-primary);
+    box-shadow: 0 0 0 3px rgba(22, 35, 77, 0.1);
+    transform: translateY(-1px);
+}
+
+.fill-all-form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.fill-all-modal-footer {
+    background: #f8f9fa;
+    padding: 1.5rem 2rem;
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    border-top: 1px solid #e1e5e9;
+}
+
+.btn-fill-all {
+    background: var(--xobo-success);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s;
+}
+
+.btn-fill-all:hover {
+    background: #0d5520;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(21, 128, 61, 0.3);
+}
+
+.btn-fill-all:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-cancel {
+    background: transparent;
+    color: var(--xobo-gray);
+    border: 2px solid #e1e5e9;
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-cancel:hover {
+    background: var(--xobo-gray);
+    color: white;
+    border-color: var(--xobo-gray);
+}
+
+@media (max-width: 768px) {
+    .fill-all-modal-content {
+        width: 95%;
+        margin: 10% auto;
+        max-height: 85vh;
+    }
+    
+    .fill-all-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .fill-all-form-group.full-width {
+        grid-column: span 1;
+    }
+    
+    .fill-all-modal-header {
+        padding: 1rem 1.5rem;
+    }
+    
+    .fill-all-modal-body {
+        padding: 1.5rem;
+    }
+    
+    .fill-all-modal-footer {
+        padding: 1rem 1.5rem;
+        flex-direction: column;
+    }
+    
+    .fill-all-modal-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
 </style>
 
 <!-- Company Header -->
@@ -1006,10 +1157,64 @@ include '../includes/header.php';
                         <input type="checkbox" id="select-all" class="cart-checkbox"> Select All
                     </label>
                 </div>
-                <div class="cart-controls-right">
+                <div class="cart-controls-right" style="display: flex; align-items: center; gap: 1rem;">
+                    <button type="button" id="fill-all-dropdown-btn" class="btn btn-primary" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-magic"></i> Fill All Delivery Details
+                        <span id="fill-all-arrow" style="display: inline-block; transition: transform 0.2s; margin-left: 0.25rem;"><i class="fas fa-chevron-down"></i></span>
+                    </button>
                     <button type="button" id="delete-selected-btn" class="btn btn-danger">
                         <i class="fas fa-trash"></i> Delete
                     </button>
+                </div>
+            </div>
+
+            <!-- Fill All Delivery Details Dropdown (block, above cart table) -->
+            <div id="fill-all-dropdown" class="delivery-details-row" style="display: none; width: 100%; margin-bottom: 2rem;">
+                <div class="delivery-details-form">
+                    <h4><i class="fas fa-truck"></i> Fill All Delivery Details</h4>
+                    <form method="POST" id="fill-all-delivery-form">
+                        <input type="hidden" name="fill_all" value="1">
+                        <div class="delivery-form-grid">
+                            <div class="form-group">
+                                <label for="fill_all_destination">
+                                    <i class="fas fa-map-marker-alt"></i> Destination <span class="required-star">*</span>
+                                </label>
+                                <input type="text" id="fill_all_destination" name="destination" placeholder="Where are these items going?" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="fill_all_company_name">
+                                    <i class="fas fa-building"></i> Company Name <span class="required-star">*</span>
+                                </label>
+                                <input type="text" id="fill_all_company_name" name="company_name" placeholder="Receiving company name" required>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="fill_all_company_address">
+                                    <i class="fas fa-map"></i> Company Address
+                                </label>
+                                <textarea id="fill_all_company_address" name="company_address" rows="2" placeholder="Full delivery address"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="fill_all_recipient_name">
+                                    <i class="fas fa-user"></i> Recipient Name
+                                </label>
+                                <input type="text" id="fill_all_recipient_name" name="recipient_name" placeholder="Person receiving the items">
+                            </div>
+                            <div class="form-group">
+                                <label for="fill_all_recipient_phone">
+                                    <i class="fas fa-phone"></i> Recipient Phone
+                                </label>
+                                <input type="tel" id="fill_all_recipient_phone" name="recipient_phone" placeholder="Contact number">
+                            </div>
+                        </div>
+                        <div class="delivery-form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Apply to All Items
+                            </button>
+                            <button type="button" class="btn btn-danger" id="cancel-fill-all-dropdown">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -1236,9 +1441,10 @@ include '../includes/header.php';
             </div>
         </div>
 
-
     <?php endif; ?>
 </div>
+
+<?php include '../includes/footer.php'; ?> 
 
 <script>
 // Quantity update function with automatic price calculation
@@ -1246,269 +1452,18 @@ function updateQuantity(productId, change) {
     const input = document.getElementById('qty_' + productId);
     let currentValue = parseInt(input.value) || 1;
     let newValue = currentValue + change;
-    
     if (newValue < 1) newValue = 1;
     if (newValue > 999) newValue = 999;
-    
     input.value = newValue;
-    
-    // Update prices automatically
-    updateLineTotalAndCart(productId, newValue);
-    
-    // AJAX update session
-    fetch('cart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `ajax=update_quantity&product_id=${productId}&quantity=${newValue}`
-    });
+    // Optionally, update prices automatically (if you have such a function)
+    // updateLineTotalAndCart(productId, newValue);
 }
 
-// Function to update line total and cart totals
-function updateLineTotalAndCart(productId, quantity) {
-    // Get the unit price from the row
-    const row = document.querySelector(`input[name="quantities[${productId}]"]`).closest('tr');
-    const unitPriceText = row.querySelector('.unit-price').textContent;
-    const unitPrice = parseFloat(unitPriceText.replace(/[^\d.]/g, ''));
-    
-    // Calculate new line total
-    const lineTotal = unitPrice * quantity;
-    
-    // Update the line total display
-    const lineTotalCell = row.querySelector('.line-total');
-    lineTotalCell.textContent = formatCurrency(lineTotal);
-    
-    // Update cart totals in header
-    updateCartTotals();
-}
-
-// Function to calculate and update cart totals
-function updateCartTotals() {
-    let totalItems = 0;
-    let totalAmount = 0;
-    let totalWeight = 0;
-    
-    // Calculate totals from all quantity inputs
-    document.querySelectorAll('input[name^="quantities["]').forEach(input => {
-        const quantity = parseInt(input.value) || 0;
-        const row = input.closest('tr');
-        const unitPriceText = row.querySelector('.unit-price').textContent;
-        const unitPrice = parseFloat(unitPriceText.replace(/[^\d.]/g, ''));
-        
-        // Get weight from the product weight cell
-        const weightText = row.querySelector('.product-weight').textContent;
-        const productWeight = parseFloat(weightText) || 0;
-        
-        totalItems += quantity;
-        totalAmount += (unitPrice * quantity);
-        totalWeight += (productWeight * quantity);
-    });
-    
-    // Update total elements at bottom
-    const totalItemsElement = document.getElementById('total-items');
-    const totalWeightElement = document.getElementById('total-weight');
-    const totalAmountElement = document.getElementById('total-amount');
-    
-    if (totalItemsElement) {
-        totalItemsElement.textContent = `${totalItems} items`;
-    }
-    if (totalWeightElement) {
-        totalWeightElement.textContent = `${totalWeight.toFixed(2)} kg`;
-    }
-    if (totalAmountElement) {
-        totalAmountElement.textContent = formatCurrency(totalAmount);
-    }
-}
-
-// Format currency helper function
-function formatCurrency(amount) {
-    return 'KSH ' + new Intl.NumberFormat('en-KE', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    }).format(amount);
-}
-
-// Select all and delete functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const selectAllCheckboxes = document.querySelectorAll('#select-all, #select-all-header');
-    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
-    const deleteBtn = document.getElementById('delete-selected-btn');
-    const cartForm = document.getElementById('cart-form');
-    
-    // Handle select all
-    selectAllCheckboxes.forEach(selectAll => {
-        selectAll.addEventListener('change', function() {
-            const isChecked = this.checked;
-            itemCheckboxes.forEach(checkbox => {
-                checkbox.checked = isChecked;
-            });
-            // Sync both select all checkboxes
-            selectAllCheckboxes.forEach(cb => cb.checked = isChecked);
-        });
-    });
-    
-    // Handle individual checkboxes
-    itemCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
-            const totalCount = itemCheckboxes.length;
-            
-            selectAllCheckboxes.forEach(selectAll => {
-                selectAll.checked = checkedCount === totalCount;
-                selectAll.indeterminate = checkedCount > 0 && checkedCount < totalCount;
-            });
-        });
-    });
-    
-    // Handle delete selected items
-    deleteBtn.addEventListener('click', function() {
-        const selectedItems = document.querySelectorAll('.item-checkbox:checked');
-        
-        if (selectedItems.length === 0) {
-            alert("You haven't selected any item");
-            return;
-        }
-        
-        const itemCount = selectedItems.length;
-        const confirmMessage = itemCount === 1 ? 
-            'Are you sure you want to delete this item?' : 
-            `Are you sure you want to delete these ${itemCount} items?`;
-        
-        if (confirm(confirmMessage)) {
-            // Create hidden input for delete action
-            const deleteInput = document.createElement('input');
-            deleteInput.type = 'hidden';
-            deleteInput.name = 'delete_selected';
-            deleteInput.value = '1';
-            cartForm.appendChild(deleteInput);
-            
-            // Submit the form
-            cartForm.submit();
-        }
-    });
-    
-    // Add event listeners for manual quantity input changes
-    document.querySelectorAll('input[name^="quantities["]').forEach(input => {
-        input.addEventListener('input', function() {
-            const productId = this.name.match(/\[(\d+)\]/)[1];
-            const quantity = parseInt(this.value) || 1;
-            
-            // Validate quantity
-            if (quantity < 1) {
-                this.value = 1;
-                updateLineTotalAndCart(productId, 1);
-            } else if (quantity > 999) {
-                this.value = 999;
-                updateLineTotalAndCart(productId, 999);
-            } else {
-                updateLineTotalAndCart(productId, quantity);
-            }
-        });
-        
-        input.addEventListener('blur', function() {
-            // Ensure minimum value on blur
-            if (this.value === '' || parseInt(this.value) < 1) {
-                this.value = 1;
-                const productId = this.name.match(/\[(\d+)\]/)[1];
-                updateLineTotalAndCart(productId, 1);
-            }
-        });
-    });
-    
-    // Handle confirm order button
-    const confirmOrderBtn = document.getElementById('confirm-order-btn');
-    if (confirmOrderBtn) {
-        confirmOrderBtn.addEventListener('click', function(e) {
-            if (this.disabled) {
-                e.preventDefault();
-                alert('Please add delivery details for at least one product before confirming your order.');
-                return;
-            }
-            
-            if (!confirm('Are you sure you want to confirm this order? This will create your order and generate a receipt.')) {
-                e.preventDefault();
-                return;
-            }
-        });
-    }
-    
-    // Add event listeners to delivery form inputs for real-time validation
-    const deliveryInputs = document.querySelectorAll('.delivery-form input, .delivery-form textarea');
-    deliveryInputs.forEach(input => {
-        input.addEventListener('input', checkDeliveryDetailsAndUpdateButton);
-        input.addEventListener('blur', checkDeliveryDetailsAndUpdateButton);
-    });
-    
-    // Add event listeners to delivery form save buttons to update status indicators
-    const deliveryForms = document.querySelectorAll('.delivery-form');
-    deliveryForms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            // Let the form submit normally, but mark that we need to update the indicator
-            const productId = form.querySelector('input[name="product_id"]').value;
-            
-            // Check if any field has content
-            const inputs = form.querySelectorAll('input[type="text"], input[type="tel"], textarea');
-            let hasContent = false;
-            inputs.forEach(input => {
-                if (input.value.trim() !== '') {
-                    hasContent = true;
-                }
-            });
-            
-            if (hasContent) {
-                // Update status indicator immediately for better UX
-                setTimeout(() => {
-                    const statusIndicator = document.querySelector(`[data-product-id="${productId}"] .status-indicator`);
-                    if (statusIndicator) {
-                        statusIndicator.className = 'status-indicator filled';
-                        statusIndicator.title = 'Delivery details filled';
-                        statusIndicator.textContent = '●';
-                    }
-                    checkDeliveryDetailsAndUpdateButton();
-                }, 100);
-            }
-        });
-    });
-    
-    // Initial check for delivery details
-    // Set initial state based on PHP data
-    const confirmBtn = document.getElementById('confirm-order-btn');
-    const hasDeliveryDetailsFromPHP = <?php echo $hasDeliveryDetails ? 'true' : 'false'; ?>;
-    
-    if (confirmBtn) {
-        if (hasDeliveryDetailsFromPHP) {
-            confirmBtn.disabled = false;
-            confirmBtn.title = '';
-            confirmBtn.classList.remove('btn-disabled');
-        } else {
-            confirmBtn.disabled = true;
-            confirmBtn.title = 'Please add delivery details for at least one product';
-            confirmBtn.classList.add('btn-disabled');
-        }
-    }
-    
-    // Also run the JavaScript check
-    checkDeliveryDetailsAndUpdateButton();
-    
-    // Initial state set successfully
-});
-
-// Toggle delivery details section
+// Toggle delivery details section for per-item dropdowns
 function toggleDeliveryDetails(productId) {
     const row = document.getElementById('delivery-row-' + productId);
     const button = document.querySelector(`[data-product-id="${productId}"]`);
     const icon = button.querySelector('i');
-
-    // --- Sync the hidden quantity field with the main cart quantity input ---
-    const mainQtyInput = document.getElementById('qty_' + productId);
-    const deliveryForm = row.querySelector('form.delivery-form');
-    if (mainQtyInput && deliveryForm) {
-        const hiddenQtyInput = deliveryForm.querySelector('input[name="quantity"]');
-        if (hiddenQtyInput) {
-            hiddenQtyInput.value = mainQtyInput.value;
-        }
-    }
-    // ----------------------------------------------------------------------
-
     if (row.style.display === 'none' || row.style.display === '') {
         row.style.display = 'table-row';
         button.classList.add('expanded');
@@ -1520,145 +1475,7 @@ function toggleDeliveryDetails(productId) {
     }
 }
 
-// Delete delivery details
-function deleteDeliveryDetails(productId) {
-    if (confirm('Are you sure you want to delete the delivery details for this product?')) {
-        // First clear the form fields for immediate visual feedback
-        const deliveryRow = document.getElementById('delivery-row-' + productId);
-        if (deliveryRow) {
-            const inputs = deliveryRow.querySelectorAll('input, textarea');
-            inputs.forEach(input => {
-                input.value = '';
-            });
-            
-            // Update the status indicator to empty
-            const statusIndicator = document.querySelector(`[data-product-id="${productId}"] .status-indicator`);
-            if (statusIndicator) {
-                statusIndicator.className = 'status-indicator empty';
-                statusIndicator.title = 'No delivery details';
-                statusIndicator.textContent = '○';
-            }
-            
-            // Close the delivery details section
-            toggleDeliveryDetails(productId);
-            
-            // Update the confirm order button state
-            checkDeliveryDetailsAndUpdateButton();
-        }
-        
-        // Create a form to submit the delete request
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.style.display = 'none';
-        
-        const actionInput = document.createElement('input');
-        actionInput.type = 'hidden';
-        actionInput.name = 'delete_delivery_details';
-        actionInput.value = '1';
-        
-        const productIdInput = document.createElement('input');
-        productIdInput.type = 'hidden';
-        productIdInput.name = 'product_id';
-        productIdInput.value = productId;
-        
-        form.appendChild(actionInput);
-        form.appendChild(productIdInput);
-        document.body.appendChild(form);
-        
-        // Submit the form to save changes to database
-        form.submit();
-    }
-}
-
-// Check if any delivery details exist and update confirm button
-function checkDeliveryDetailsAndUpdateButton(onlyCheck) {
-    const confirmBtn = document.getElementById('confirm-order-btn');
-    let hasDetails = false;
-    const filledIndicators = document.querySelectorAll('.status-indicator.filled');
-    if (filledIndicators.length > 0) {
-        hasDetails = true;
-    } else {
-        const deliveryForms = document.querySelectorAll('.delivery-form');
-        deliveryForms.forEach(form => {
-            const inputs = form.querySelectorAll('input[type="text"], input[type="tel"], textarea');
-            inputs.forEach(input => {
-                if (input.value.trim() !== '') {
-                    hasDetails = true;
-                }
-            });
-        });
-    }
-    if (!onlyCheck) {
-        // Instead of updating button here, call the new combined check
-        checkVehicleTypeAndUpdateButton();
-    }
-    return hasDetails;
-}
-
-// Add animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
-
-// Font Awesome icons in select (for modern browsers)
-document.addEventListener('DOMContentLoaded', function() {
-    const select = document.getElementById('vehicle_type');
-    if (select) {
-        for (let i = 0; i < select.options.length; i++) {
-            const opt = select.options[i];
-            if (opt.dataset.icon) {
-                opt.textContent = String.fromCharCode(parseInt(opt.innerHTML.match(/&#x([0-9a-fA-F]+);/)[1], 16)) + ' ' + opt.textContent.replace(/^[^ ]+ /, '');
-            }
-        }
-    }
-});
-
-// --- VEHICLE TYPE CHECK ---
-function checkVehicleTypeAndUpdateButton() {
-    const vehicleTypeSelect = document.getElementById('vehicle_type');
-    const confirmBtn = document.getElementById('confirm-order-btn');
-    // Also check delivery details
-    const hasDeliveryDetails = checkDeliveryDetailsAndUpdateButton(true); // pass true to only check, not update
-    let vehicleTypeValid = false;
-    if (vehicleTypeSelect) {
-        vehicleTypeValid = !!vehicleTypeSelect.value && vehicleTypeSelect.value.trim() !== '';
-    }
-    if (confirmBtn) {
-        if (hasDeliveryDetails && vehicleTypeValid) {
-            confirmBtn.disabled = false;
-            confirmBtn.title = '';
-            confirmBtn.classList.remove('btn-disabled');
-        } else if (!hasDeliveryDetails) {
-            confirmBtn.disabled = true;
-            confirmBtn.title = 'Please add delivery details for at least one product';
-            confirmBtn.classList.add('btn-disabled');
-        } else if (!vehicleTypeValid) {
-            confirmBtn.disabled = true;
-            confirmBtn.title = 'Please select a vehicle type';
-            confirmBtn.classList.add('btn-disabled');
-        }
-    }
-    return hasDeliveryDetails && vehicleTypeValid;
-}
-
-// Add vehicle type change event
-const vehicleTypeSelect = document.getElementById('vehicle_type');
-if (vehicleTypeSelect) {
-    vehicleTypeSelect.addEventListener('change', checkVehicleTypeAndUpdateButton);
-}
-// Initial combined check
-checkVehicleTypeAndUpdateButton();
-
+// Toggle accessories details section for accessories dropdowns
 function toggleAccessoriesRow(productId) {
     const row = document.getElementById('accessories-row-' + productId);
     const button = document.querySelector('.accessories-toggle-btn[data-product-id="' + productId + '"]');
@@ -1666,15 +1483,94 @@ function toggleAccessoriesRow(productId) {
     if (row.style.display === 'none' || row.style.display === '') {
         row.style.display = 'table-row';
         button.classList.add('expanded');
-        icon.classList.remove('fa-chevron-down');
-        icon.classList.add('fa-chevron-up');
+        icon.style.transform = 'rotate(180deg)';
     } else {
         row.style.display = 'none';
         button.classList.remove('expanded');
-        icon.classList.remove('fa-chevron-up');
-        icon.classList.add('fa-chevron-down');
+        icon.style.transform = 'rotate(0deg)';
     }
 }
-</script>
 
-<?php include '../includes/footer.php'; ?> 
+// Fill All Delivery Details Dropdown logic with arrow rotation
+const fillAllBtn = document.getElementById('fill-all-dropdown-btn');
+const fillAllDropdown = document.getElementById('fill-all-dropdown');
+const cancelFillAllDropdown = document.getElementById('cancel-fill-all-dropdown');
+const fillAllArrow = document.getElementById('fill-all-arrow');
+if (fillAllBtn && fillAllDropdown && fillAllArrow) {
+    fillAllBtn.addEventListener('click', function() {
+        const isOpen = fillAllDropdown.style.display === 'block';
+        fillAllDropdown.style.display = isOpen ? 'none' : 'block';
+        fillAllArrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        if (!isOpen) {
+            fillAllDropdown.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+}
+if (cancelFillAllDropdown && fillAllDropdown && fillAllArrow) {
+    cancelFillAllDropdown.addEventListener('click', function() {
+        fillAllDropdown.style.display = 'none';
+        fillAllArrow.style.transform = 'rotate(0deg)';
+    });
+}
+
+// Select All and item checkbox logic
+const selectAll = document.getElementById('select-all');
+const selectAllHeader = document.getElementById('select-all-header');
+const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+
+function updateSelectAllState() {
+    const checkedCount = document.querySelectorAll('.item-checkbox:checked').length;
+    const totalCount = itemCheckboxes.length;
+    if (selectAll) {
+        selectAll.checked = checkedCount === totalCount && totalCount > 0;
+        selectAll.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+    }
+    if (selectAllHeader) {
+        selectAllHeader.checked = checkedCount === totalCount && totalCount > 0;
+        selectAllHeader.indeterminate = checkedCount > 0 && checkedCount < totalCount;
+    }
+}
+
+if (selectAll) {
+    selectAll.addEventListener('change', function() {
+        itemCheckboxes.forEach(cb => { cb.checked = selectAll.checked; });
+        if (selectAllHeader) selectAllHeader.checked = selectAll.checked;
+    });
+}
+if (selectAllHeader) {
+    selectAllHeader.addEventListener('change', function() {
+        itemCheckboxes.forEach(cb => { cb.checked = selectAllHeader.checked; });
+        if (selectAll) selectAll.checked = selectAllHeader.checked;
+    });
+}
+itemCheckboxes.forEach(cb => {
+    cb.addEventListener('change', updateSelectAllState);
+});
+// Initialize state on page load
+updateSelectAllState();
+
+// Restore original delete button JS
+const deleteBtn = document.getElementById('delete-selected-btn');
+const cartForm = document.getElementById('cart-form');
+if (deleteBtn && cartForm) {
+    deleteBtn.addEventListener('click', function() {
+        const checked = document.querySelectorAll('.item-checkbox:checked');
+        if (checked.length === 0) {
+            alert("You haven't selected any item");
+            return;
+        }
+        const confirmMsg = checked.length === 1 ? 'Are you sure you want to delete this item?' : `Are you sure you want to delete these ${checked.length} items?`;
+        if (!confirm(confirmMsg)) return;
+        // Add hidden input for delete_selected
+        let hidden = cartForm.querySelector('input[name="delete_selected"]');
+        if (!hidden) {
+            hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = 'delete_selected';
+            hidden.value = '1';
+            cartForm.appendChild(hidden);
+        }
+        cartForm.submit();
+    });
+}
+</script> 
