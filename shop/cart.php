@@ -1455,9 +1455,39 @@ function updateQuantity(productId, change) {
     if (newValue < 1) newValue = 1;
     if (newValue > 999) newValue = 999;
     input.value = newValue;
-    // Optionally, update prices automatically (if you have such a function)
-    // updateLineTotalAndCart(productId, newValue);
+    // Update session via AJAX
+    updateQuantitySession(productId, newValue);
 }
+
+// Update session quantity via AJAX
+function updateQuantitySession(productId, quantity) {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '', true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.send('ajax=update_quantity&product_id=' + encodeURIComponent(productId) + '&quantity=' + encodeURIComponent(quantity));
+}
+
+// Attach event listeners to all quantity inputs for manual changes
+window.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.qty-input').forEach(function(input) {
+        input.addEventListener('change', function() {
+            let val = parseInt(input.value) || 1;
+            if (val < 1) val = 1;
+            if (val > 999) val = 999;
+            input.value = val;
+            const productId = input.id.replace('qty_', '');
+            updateQuantitySession(productId, val);
+        });
+        input.addEventListener('blur', function() {
+            let val = parseInt(input.value) || 1;
+            if (val < 1) val = 1;
+            if (val > 999) val = 999;
+            input.value = val;
+            const productId = input.id.replace('qty_', '');
+            updateQuantitySession(productId, val);
+        });
+    });
+});
 
 // Toggle delivery details section for per-item dropdowns
 function toggleDeliveryDetails(productId) {
