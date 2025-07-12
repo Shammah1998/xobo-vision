@@ -95,7 +95,7 @@ $out = fopen('php://output', 'w');
 fputcsv($out, [
     'Order ID', 'Company', 'User Email', 'Total (KSH)', 'Status', 'Date',
     'Product Name', 'SKU', 'Quantity', 'Line Total (KSH)',
-    'Delivery Destination', 'Delivery Company', 'Delivery Address', 'Recipient', 'Phone',
+    'Pick Up', 'Drop Off', 'Additional Notes', 'Recipient', 'Phone',
     'Driver', 'Vehicle Type'
 ]);
 
@@ -115,9 +115,9 @@ foreach ($orders as $order) {
                 $item['sku'],
                 $item['quantity'],
                 $item['line_total'],
-                $d['destination'] ?? '',
-                $d['company_name'] ?? '',
-                $d['company_address'] ?? '',
+                $d['pick_up'] ?? '',
+                $d['drop_off'] ?? '',
+                $d['additional_notes'] ?? '',
                 $d['recipient_name'] ?? '',
                 $d['recipient_phone'] ?? '',
                 $drivers[$order['id']] ?? '',

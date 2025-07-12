@@ -143,4 +143,7 @@ ALTER TABLE delivery_details CHANGE company_name drop_off VARCHAR(255) NULL;
 ALTER TABLE delivery_details CHANGE company_address additional_notes TEXT NULL;
 
 -- ALTER TABLE statements to rename columns in order_delivery_details:
+ALTER TABLE order_delivery_details CHANGE destination pick_up VARCHAR(500) NULL;
+ALTER TABLE order_delivery_details CHANGE company_name drop_off VARCHAR(255) NULL;
+ALTER TABLE order_delivery_details CHANGE company_address additional_notes TEXT NULL;
 

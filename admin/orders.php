@@ -192,9 +192,9 @@ if ($orderIds) {
                                                         <?php $d = $deliveryDetails[$order['id']][$item['product_id']] ?? null; ?>
                                                         <?php if ($d): ?>
                                                             <ul class="delivery-details-list flat-list" style="margin:0; padding-left:1.2em;">
-                                                                <li>Destination: <?php echo htmlspecialchars($d['destination'] ?? '-'); ?></li>
-                                                                <li>Company: <?php echo htmlspecialchars($d['company_name'] ?? '-'); ?></li>
-                                                                <li>Address: <?php echo htmlspecialchars($d['company_address'] ?? '-'); ?></li>
+                                                                <li>Pick Up: <?php echo htmlspecialchars($d['pick_up'] ?? '-'); ?></li>
+                                                                <li>Drop Off: <?php echo htmlspecialchars($d['drop_off'] ?? '-'); ?></li>
+                                                                <li>Additional Notes: <?php echo htmlspecialchars($d['additional_notes'] ?? '-'); ?></li>
                                                                 <li>Recipient: <?php echo htmlspecialchars($d['recipient_name'] ?? '-'); ?></li>
                                                                 <li>Phone: <?php echo htmlspecialchars($d['recipient_phone'] ?? '-'); ?></li>
                                                             </ul>

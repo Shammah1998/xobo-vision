@@ -73,20 +73,55 @@ if (!empty($db_orders)) {
             return htmlspecialchars($item['name']) . ' (' . $item['quantity'] . 'x @' . number_format($item['rate_ksh'], 0) . ')';
         }, $items_list));
 
-        // Build delivery details HTML as a flat unordered list (one bullet per field, no bold labels)
+        // --- NEW DELIVERY ADDRESS LOGIC ---
         $delivery_html = '';
         if (!empty($items_list)) {
+            // Collect all delivery details for this order
+            $all_details = [];
             foreach ($items_list as $item) {
                 $d = $delivery_details[$item['product_id']] ?? [];
+                $all_details[] = [
+                    'pick_up' => $d['pick_up'] ?? '-',
+                    'drop_off' => $d['drop_off'] ?? '-',
+                    'additional_notes' => $d['additional_notes'] ?? '-',
+                    'recipient_name' => $d['recipient_name'] ?? '-',
+                    'recipient_phone' => $d['recipient_phone'] ?? '-',
+                ];
+            }
+            // Check if all delivery details are the same
+            $first = $all_details[0];
+            $all_same = true;
+            foreach ($all_details as $det) {
+                if ($det !== $first) {
+                    $all_same = false;
+                    break;
+                }
+            }
+            if ($all_same) {
+                // Show one delivery address block
                 $delivery_html .= '<ul class="delivery-details-list flat-list">';
-                $delivery_html .= '<li>Destination: ' . htmlspecialchars($d['destination'] ?? '-') . '</li>';
-                $delivery_html .= '<li>Company: ' . htmlspecialchars($d['company_name'] ?? '-') . '</li>';
-                $delivery_html .= '<li>Address: ' . htmlspecialchars($d['company_address'] ?? '-') . '</li>';
-                $delivery_html .= '<li>Recipient: ' . htmlspecialchars($d['recipient_name'] ?? '-') . '</li>';
-                $delivery_html .= '<li>Phone: ' . htmlspecialchars($d['recipient_phone'] ?? '-') . '</li>';
+                $delivery_html .= '<li>Pick Up: ' . htmlspecialchars($first['pick_up']) . '</li>';
+                $delivery_html .= '<li>Drop Off: ' . htmlspecialchars($first['drop_off']) . '</li>';
+                $delivery_html .= '<li>Additional Notes: ' . htmlspecialchars($first['additional_notes']) . '</li>';
+                $delivery_html .= '<li>Recipient: ' . htmlspecialchars($first['recipient_name']) . '</li>';
+                $delivery_html .= '<li>Phone: ' . htmlspecialchars($first['recipient_phone']) . '</li>';
                 $delivery_html .= '</ul>';
+            } else {
+                // Show per-item delivery address, labeled with product name
+                foreach ($items_list as $item) {
+                    $d = $delivery_details[$item['product_id']] ?? [];
+                    $delivery_html .= '<div style="margin-bottom:0.5em"><strong>' . htmlspecialchars($item['name']) . ':</strong>';
+                    $delivery_html .= '<ul class="delivery-details-list flat-list">';
+                    $delivery_html .= '<li>Pick Up: ' . htmlspecialchars($d['pick_up'] ?? '-') . '</li>';
+                    $delivery_html .= '<li>Drop Off: ' . htmlspecialchars($d['drop_off'] ?? '-') . '</li>';
+                    $delivery_html .= '<li>Additional Notes: ' . htmlspecialchars($d['additional_notes'] ?? '-') . '</li>';
+                    $delivery_html .= '<li>Recipient: ' . htmlspecialchars($d['recipient_name'] ?? '-') . '</li>';
+                    $delivery_html .= '<li>Phone: ' . htmlspecialchars($d['recipient_phone'] ?? '-') . '</li>';
+                    $delivery_html .= '</ul></div>';
+                }
             }
         }
+        // --- END NEW DELIVERY ADDRESS LOGIC ---
 
         $orders[] = [
             'id' => $order_id,
