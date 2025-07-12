@@ -496,6 +496,24 @@ include 'includes/header.php';
     transform: rotate(180deg);
 }
 
+/* Accessories Search Container */
+.accessories-search-container {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-bottom: 1px solid var(--xobo-border);
+    margin-bottom: 1rem;
+}
+
+.accessories-search-container .search-container {
+    margin-bottom: 0.5rem;
+}
+
+.accessories-search-container .search-results-count {
+    font-size: 0.8rem;
+    color: var(--xobo-gray);
+    font-style: italic;
+}
+
 @media (max-width: 768px) {
     .catalog-header {
         flex-direction: column;
@@ -852,9 +870,39 @@ document.addEventListener('DOMContentLoaded', function() {
             '<i class="fas fa-check-square"></i> Select All';
     }
     
+    // Update accessories select all checkbox state
+    function updateAccessoriesSelectAll() {
+        const selectAllAccessoriesCheckbox = document.getElementById('select-all-accessories-checkbox');
+        const accessoriesRow = document.querySelector('.accessories-dropdown-row');
+        if (!selectAllAccessoriesCheckbox || !accessoriesRow) return;
+        
+        // Get only visible accessory checkboxes
+        const visibleAccessoryCheckboxes = Array.from(accessoriesRow.querySelectorAll('.product-checkbox')).filter(checkbox => {
+            return checkbox.closest('tr').style.display !== 'none';
+        });
+        
+        const checkedVisibleAccessories = visibleAccessoryCheckboxes.filter(checkbox => checkbox.checked);
+        
+        if (checkedVisibleAccessories.length === 0) {
+            selectAllAccessoriesCheckbox.indeterminate = false;
+            selectAllAccessoriesCheckbox.checked = false;
+        } else if (checkedVisibleAccessories.length === visibleAccessoryCheckboxes.length) {
+            selectAllAccessoriesCheckbox.indeterminate = false;
+            selectAllAccessoriesCheckbox.checked = true;
+        } else {
+            selectAllAccessoriesCheckbox.indeterminate = true;
+        }
+    }
+    
     // Handle individual checkbox changes
     productCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateSelection);
+        checkbox.addEventListener('change', function() {
+            updateSelection();
+            // Also update accessories select all state if this is an accessory checkbox
+            if (checkbox.closest('.accessories-dropdown-row')) {
+                updateAccessoriesSelectAll();
+            }
+        });
     });
     
     // Handle select all checkbox (only for visible products)
@@ -1025,43 +1073,91 @@ document.addEventListener('DOMContentLoaded', function() {
     const accessoriesSearch = document.getElementById('accessories-search');
     const clearAccessoriesSearchBtn = document.getElementById('clear-accessories-search');
     const accessoriesSearchResults = document.getElementById('accessories-search-results');
+    
     function filterAccessories(term) {
         let visibleCount = 0;
-        const searchTerm = (term || accessoriesSearch.value).toLowerCase().trim();
+        const searchTerm = (term || accessoriesSearch?.value || '').toLowerCase().trim();
         const noResultsDiv = document.getElementById('no-accessories-search-results');
+        
         // Dynamically select the rows each time
         const rows = accessoriesRow ? accessoriesRow.querySelectorAll('tbody tr') : [];
         rows.forEach(row => {
-            const name = row.querySelector('.product-name').textContent.toLowerCase();
-            const sku = row.querySelector('.product-sku').textContent.toLowerCase();
+            const name = row.querySelector('.product-name')?.textContent.toLowerCase() || '';
+            const sku = row.querySelector('.product-sku')?.textContent.toLowerCase() || '';
             const isVisible = searchTerm === '' || name.includes(searchTerm) || sku.includes(searchTerm);
             row.style.display = isVisible ? '' : 'none';
             if (isVisible) visibleCount++;
         });
+        
+        // Show/hide no results message
         if (noResultsDiv) {
             noResultsDiv.style.display = (searchTerm !== '' && visibleCount === 0) ? 'flex' : 'none';
         }
-        accessoriesSearchResults.textContent = searchTerm === '' ? 'All accessories' : `${visibleCount} accessory${visibleCount !== 1 ? 'ies' : 'y'} found`;
-        clearAccessoriesSearchBtn.style.display = searchTerm === '' ? 'none' : 'block';
-    }
+        
+        // Update search results count
+        if (accessoriesSearchResults) {
+            accessoriesSearchResults.textContent = searchTerm === '' ? 'All accessories' : `${visibleCount} accessory${visibleCount !== 1 ? 'ies' : 'y'} found`;
+        }
+        
+        // Show/hide clear button
+        if (clearAccessoriesSearchBtn) {
+            clearAccessoriesSearchBtn.style.display = searchTerm === '' ? 'none' : 'block';
+        }
+        
+                 // Update main selection system after filtering accessories
+         updateSelection();
+         updateAccessoriesSelectAll();
+     }
+    
+    // Accessories search event listeners
     if (accessoriesSearch) {
-        accessoriesSearch.addEventListener('input', function() { filterAccessories(); });
-    }
-    if (clearAccessoriesSearchBtn) {
-        clearAccessoriesSearchBtn.addEventListener('click', function() {
-            accessoriesSearch.value = '';
-            filterAccessories('');
-            accessoriesSearch.focus();
+        accessoriesSearch.addEventListener('input', function() { 
+            filterAccessories(); 
+        });
+        
+        // Escape key support for accessories search
+        accessoriesSearch.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                this.value = '';
+                filterAccessories('');
+                this.focus();
+            }
         });
     }
-    // Select all accessories
+    
+    if (clearAccessoriesSearchBtn) {
+        clearAccessoriesSearchBtn.addEventListener('click', function() {
+            if (accessoriesSearch) {
+                accessoriesSearch.value = '';
+                filterAccessories('');
+                accessoriesSearch.focus();
+            }
+        });
+    }
+    
+    // Select all accessories checkbox
     const selectAllAccessoriesCheckbox = document.getElementById('select-all-accessories-checkbox');
     if (selectAllAccessoriesCheckbox && accessoriesRow) {
         selectAllAccessoriesCheckbox.addEventListener('change', function() {
-            const accessoryCheckboxes = accessoriesRow.querySelectorAll('.product-checkbox');
-            accessoryCheckboxes.forEach(cb => { if (cb.closest('tr').style.display !== 'none') cb.checked = this.checked; });
+            const isChecked = this.checked;
+            
+            // Get only visible accessory checkboxes
+            const visibleAccessoryCheckboxes = Array.from(accessoriesRow.querySelectorAll('.product-checkbox')).filter(checkbox => {
+                return checkbox.closest('tr').style.display !== 'none';
+            });
+            
+            // Update all visible accessories
+            visibleAccessoryCheckboxes.forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+            
+            // Update main selection system
+            updateSelection();
         });
     }
+    
+    // Make filterAccessories available globally for no-results button
+    window.filterAccessories = filterAccessories;
 });
 </script>
 
