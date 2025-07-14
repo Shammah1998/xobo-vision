@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 require_once '../includes/functions.php';
 require_once '../config/db.php';
 
-requireRole(['user']);
+requireRole(['user', 'admin_user']);
 
 $userId = $_SESSION['user_id'];
 $companyId = $_SESSION['company_id'];
@@ -17,6 +17,29 @@ $success = isset($_GET['success']) ? 'Order placed successfully!' : '';
 if (empty($companyId)) {
     header('Location: ' . BASE_URL . '/auth/login?error=' . urlencode('You must be associated with a company to view orders.'));
     exit;
+}
+
+// Handle order confirmation by admin_user
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_order_id'])) {
+    if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user') {
+        $confirmOrderId = (int)$_POST['confirm_order_id'];
+        // Only allow confirming if order is pending and belongs to this company
+        $stmt = $pdo->prepare('SELECT status FROM orders WHERE id = ? AND company_id = ?');
+        $stmt->execute([$confirmOrderId, $companyId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($order && $order['status'] === 'pending') {
+            $stmt = $pdo->prepare('UPDATE orders SET status = "confirmed" WHERE id = ?');
+            $stmt->execute([$confirmOrderId]);
+            $success = 'Order #' . str_pad($confirmOrderId, 6, '0', STR_PAD_LEFT) . ' has been confirmed.';
+            // Optionally: redirect to avoid resubmission
+            header('Location: ' . $_SERVER['REQUEST_URI'] . '?success=' . urlencode($success));
+            exit;
+        } else {
+            $success = 'Order could not be confirmed (already confirmed or not found).';
+        }
+    } else {
+        $success = 'You do not have permission to confirm orders.';
+    }
 }
 
 // Fetch orders for the user's company from the database
@@ -166,6 +189,13 @@ include '../includes/header.php';
     <?php endif; ?>
 
     <div class="catalog-section">
+        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
+            <div class="btn-csv-container">
+                <a href="../admin/export-orders.php" target="_blank" class="btn btn-primary">
+                    <i class="fas fa-download"></i> Download CSV
+                </a>
+            </div>
+        <?php endif; ?>
         <div id="table-scrollbar-top" class="table-scrollbar-top"></div>
         <div class="catalog-table-container" id="table-scrollbar-bottom">
             <?php if (empty($orders)): ?>
@@ -187,6 +217,11 @@ include '../includes/header.php';
                             <th class="items-col">Items</th>
                             <th class="total-col">Total (KSH)</th>
                             <th class="address-col">Delivery Address</th>
+                            <th class="status-col">Status</th>
+                            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
+
+                                <th class="actions-col">Actions</th>
+                            <?php endif; ?>
                             <th class="driver-col">Driver</th>
                             <th class="receipt-col">Receipt</th>
                         </tr>
@@ -209,6 +244,30 @@ include '../includes/header.php';
                                         <?php echo $order['delivery_html']; ?>
                                     </div>
                                 </td>
+                                <td class="status-col">
+                                    <?php
+                                    $status = $db_orders[array_search($order['id'], array_column($db_orders, 'id'))]['status'];
+                                    $statusText = ucfirst($status);
+                                    $statusClass = $status === 'confirmed' ? 'status-confirmed' : 'status-pending';
+                                    echo '<span class="status-text ' . $statusClass . '">' . $statusText . '</span>';
+                                    ?>
+                                </td>
+                                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
+                                <td class="actions-col">
+                                    <div class="actions-buttons">
+                                    <?php
+                                    // Role check passed
+                                    if ($status === 'pending') {
+                                        echo '<form method="POST" class="inline-form">';
+                                        echo '<input type="hidden" name="confirm_order_id" value="' . (int)$order['id'] . '">';
+                                        echo '<button type="submit" class="btn-confirm-order btn-uniform btn-sm" title="Confirm this order" onclick="return confirm(\'Confirm this order?\');">Confirm</button>';
+                                        echo '</form>';
+                                        echo '<a href="../admin/edit-order-working.php?id=' . (int)$order['id'] . '" class="btn-edit-order btn-uniform btn-sm" title="Edit order details">Edit</a>';
+                                    }
+                                    ?>
+                                    </div>
+                                </td>
+                                <?php endif; ?>
                                 <td class="driver-col">
                                     <?php echo $order['driver']; ?>
                                 </td>
@@ -444,20 +503,45 @@ include '../includes/header.php';
     box-shadow: 0 4px 12px rgba(37,99,235,0.15);
     transform: translateY(-1px) scale(1.03);
 }
-.btn-receipt-long-narrow {
+.btn-uniform, .btn-receipt-long-narrow {
     min-width: 70px;
     height: 36px;
-    padding: 0.25rem 0.5rem;
+    padding: 0.25rem 0.9rem;
     font-size: 1rem;
     font-weight: 600;
     border-radius: 6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    border: none;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.actions-buttons .btn-confirm-order {
+    background: var(--xobo-primary);
+    color: #fff;
+    border: 1px solid var(--xobo-primary);
+}
+.actions-buttons .btn-confirm-order:hover {
+    background: var(--xobo-primary-hover);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(37,99,235,0.12);
+}
+.actions-buttons .btn-edit-order {
+    background: var(--xobo-primary) !important;
+    color: #fff !important;
+    border: 1px solid var(--xobo-primary) !important;
+}
+.actions-buttons .btn-edit-order:hover {
+    background: var(--xobo-primary-hover) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 6px rgba(37,99,235,0.12);
+}
+.btn-receipt-long-narrow {
     background: var(--xobo-primary);
     color: #fff;
     border: none;
-    transition: background 0.2s;
     text-decoration: none !important;
     gap: 0.5rem;
 }
@@ -465,8 +549,125 @@ include '../includes/header.php';
     background: var(--xobo-primary-hover);
     color: #fff;
 }
-/* Add driver-col style */
-.driver-col { min-width: 150px; }
+.status-text {
+    margin-right: 0.5em;
+    font-size: 0.95em;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+.status-col {
+    min-width: 110px;
+    white-space: nowrap;
+    text-align: left;
+}
+.actions-col {
+    min-width: 140px;
+    white-space: nowrap;
+    text-align: left;
+}
+.status-text.status-pending {
+    color: #fff;
+    background: #e53935;
+    border-radius: 6px;
+    padding: 0.25rem 0.9rem;
+    font-size: 1rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    min-width: 70px;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.status-text.status-confirmed {
+    color: #fff;
+    background: var(--xobo-primary);
+    border-radius: 6px;
+    padding: 0.25rem 0.9rem;
+    font-size: 1rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    height: 36px;
+    min-width: 70px;
+    justify-content: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.actions-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+.actions-buttons .inline-form {
+    display: inline;
+    margin: 0;
+    padding: 0;
+}
+.actions-buttons .btn-confirm-order {
+    background: #198754;
+    color: #fff;
+    border: 1px solid #198754;
+    font-size: 0.92em;
+    padding: 0.25em 0.9em;
+    border-radius: 5px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
+}
+.actions-buttons .btn-confirm-order:hover {
+    background: #157347;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(25,135,84,0.12);
+}
+.actions-buttons .btn-edit-order {
+    background: #ffc107;
+    color: #333;
+    border: 1px solid #ffc107;
+    font-size: 0.92em;
+    padding: 0.25em 0.9em;
+    border-radius: 5px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
+}
+.actions-buttons .btn-edit-order:hover {
+    background: #e0a800;
+    color: #222;
+    box-shadow: 0 2px 6px rgba(255,193,7,0.12);
+}
+.driver-col {
+    min-width: 130px;
+    white-space: nowrap;
+    text-align: left;
+}
+.catalog-section a.btn.btn-primary {
+    background: var(--xobo-primary) !important;
+    color: #fff !important;
+    border-radius: 6px !important;
+    padding: 0.7em 1.5em !important;
+    font-weight: 600 !important;
+    text-decoration: none !important;
+    border: none !important;
+    font-size: 1rem !important;
+    transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 6px rgba(37,99,235,0.08);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+}
+.catalog-section a.btn.btn-primary:hover {
+    background: var(--xobo-primary-hover) !important;
+    color: #fff !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.15);
+    transform: translateY(-1px) scale(1.03);
+}
+.catalog-section .btn-csv-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1.2rem;
+    margin-right: 2.2rem;
+    margin-bottom: 1rem;
+}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {

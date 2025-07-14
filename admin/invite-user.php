@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = sanitize($_POST['email']);
     $password = $_POST['password'];
     $userName = sanitize($_POST['user_name']);
+    $phone = isset($_POST['phone']) ? sanitize($_POST['phone']) : null;
     
     // Validation
     if (empty($companyId) || empty($email) || empty($password) || empty($userName)) {
@@ -52,8 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     // Insert new user (always as regular user)
                     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("INSERT INTO users (company_id, email, password, role) VALUES (?, ?, ?, 'user')");
-                    $stmt->execute([$companyId, $email, $hashedPassword]);
+                    $stmt = $pdo->prepare("INSERT INTO users (company_id, email, name, phone, password, role) VALUES (?, ?, ?, ?, ?, 'user')");
+                    $stmt->execute([$companyId, $email, $userName, $phone, $hashedPassword]);
                     
                     $message = "User '{$userName}' has been successfully invited to '{$company['name']}'.";
                     
@@ -139,6 +140,14 @@ include 'includes/admin_header.php';
         </div>
 
         <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="text" id="phone" name="phone" 
+                   value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>"
+                   style="width: 100%; padding: 12px; border: 1px solid var(--xobo-border); border-radius: 4px;"
+                   placeholder="Phone number (optional)">
+        </div>
+
+        <div class="form-group">
             <label for="email">Email Address *</label>
             <input type="email" id="email" name="email" required 
                    value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>"
@@ -157,8 +166,9 @@ include 'includes/admin_header.php';
                style="padding: 12px 24px; background: var(--xobo-gray); color: white; text-decoration: none; border-radius: 4px;">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
-            <button type="submit" class="btn" style="background: var(--xobo-primary); color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer;">
+            <button type="submit" class="btn invite-btn" id="inviteBtn" style="background: var(--xobo-primary); color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; position: relative; min-width: 160px;">
                 <i class="fas fa-user-plus"></i> Invite User
+                <span class="spinner" id="inviteSpinner" style="display: none; position: absolute; right: 18px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px;"></span>
             </button>
         </div>
     </form>
@@ -277,6 +287,39 @@ include 'includes/admin_header.php';
     color: #721c24;
     border: 1px solid #f5c6cb;
 }
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #16234d;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 </style>
-
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var form = document.querySelector('form');
+  var btn = document.getElementById('inviteBtn');
+  var spinner = document.getElementById('inviteSpinner');
+  if (form && btn && spinner) {
+    form.addEventListener('submit', function() {
+      btn.disabled = true;
+      spinner.style.display = 'inline-block';
+    });
+  }
+  // If success message is present, redirect after 2s
+  var success = document.querySelector('.alert-success');
+  if (success) {
+    btn.disabled = true;
+    spinner.style.display = 'inline-block';
+    setTimeout(function() {
+      window.location.href = '<?php echo BASE_URL; ?>/admin/invite-user';
+    }, 2000);
+  }
+});
+</script>
 <?php include 'includes/admin_footer.php'; ?> 

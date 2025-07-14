@@ -23,6 +23,12 @@ RewriteRule ^(.*)/$ $1 [L,R=301]
 RewriteRule ^index/?$ products [R=301,L]
 RewriteRule ^products/?$ index.php [L]
 
+# Profile page masking
+RewriteRule ^profile/?$ profile.php [L]
+
+# Invite user page masking
+RewriteRule ^invite-user/?$ invite-user.php [L]
+
 # Handle 404 errors
 ErrorDocument 404 /xobo-c/404
 
@@ -64,6 +70,8 @@ RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
+# Exclude admin directory from PHP extension rewrite
+RewriteCond %{REQUEST_URI} !^/xobo-c/admin/
 # If the request does not contain a file extension and a .php file exists, rewrite to .php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

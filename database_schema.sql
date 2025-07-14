@@ -14,7 +14,7 @@ CREATE TABLE users (
   company_id   INT NULL,
   email        VARCHAR(255) UNIQUE NOT NULL,
   password     VARCHAR(255) NOT NULL,
-  role         ENUM('super_admin','company_admin','admin','user') NOT NULL,
+  role         ENUM('super_admin','admin','admin_user','user') NOT NULL,
   created_at   DATETIME NOT NULL,
   FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE SET NULL
 );
@@ -38,6 +38,7 @@ CREATE TABLE orders (
   company_id   INT NULL,
   total_ksh    DECIMAL(12,2) NOT NULL,
   address      TEXT,
+  status       ENUM('pending','confirmed') NOT NULL DEFAULT 'pending',
   created_at   DATETIME NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE SET NULL
@@ -146,4 +147,16 @@ ALTER TABLE delivery_details CHANGE company_address additional_notes TEXT NULL;
 ALTER TABLE order_delivery_details CHANGE destination pick_up VARCHAR(500) NULL;
 ALTER TABLE order_delivery_details CHANGE company_name drop_off VARCHAR(255) NULL;
 ALTER TABLE order_delivery_details CHANGE company_address additional_notes TEXT NULL;
+
+-- Add status column to orders table for existing databases
+ALTER TABLE orders ADD COLUMN status ENUM('pending','confirmed') NOT NULL DEFAULT 'pending' AFTER address;
+
+ALTER TABLE users MODIFY role ENUM('super_admin','admin','admin_user','user') NOT NULL;
+ALTER TABLE users ADD COLUMN name VARCHAR(255) NULL AFTER email;
+ALTER TABLE users ADD COLUMN phone VARCHAR(32) NULL AFTER name;
+
+-- Backfill name for existing users (set to part before @ in email, capitalized)
+UPDATE users SET name = CONCAT(UPPER(LEFT(SUBSTRING_INDEX(email, '@', 1), 1)), LOWER(SUBSTRING(SUBSTRING_INDEX(email, '@', 1), 2))) WHERE name IS NULL OR name = '';
+-- Set phone to NULL for all users (if not already)
+UPDATE users SET phone = NULL WHERE phone IS NULL OR phone = '';
 

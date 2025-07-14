@@ -40,6 +40,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_all_orders']) 
     }
 }
 
+// Handle status update (admin_user only)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status_order_id'], $_POST['order_status']) && isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user') {
+    $orderId = (int)$_POST['update_status_order_id'];
+    $newStatus = $_POST['order_status'];
+    if (in_array($newStatus, ['pending', 'confirmed'])) {
+        $stmt = $pdo->prepare('UPDATE orders SET status = ? WHERE id = ?');
+        $stmt->execute([$newStatus, $orderId]);
+        $message = 'Order status updated.';
+    }
+}
+
 include 'includes/admin_header.php';
 require_once '../config/db.php';
 
@@ -130,7 +141,9 @@ if ($orderIds) {
         <?php if ($orderIdSearch || $fromDate || $toDate): ?>
             <a href="orders" class="btn btn-secondary">Clear</a>
         <?php endif; ?>
+        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
         <button type="button" class="btn btn-success" id="download-csv-btn">Download CSV</button>
+        <?php endif; ?>
     </form>
     <?php if (!empty($message)): ?>
         <div class="alert alert-success" style="margin-bottom:1rem;"><?php echo htmlspecialchars($message); ?></div>
@@ -151,13 +164,30 @@ if ($orderIds) {
             <tbody>
             <?php if ($orders && count($orders) > 0): ?>
                 <?php foreach($orders as $order): ?>
+                    <?php
+                    // Fetch order status for this order
+                    $stmtStatus = $pdo->prepare('SELECT status FROM orders WHERE id = ?');
+                    $stmtStatus->execute([$order['id']]);
+                    $orderStatusRow = $stmtStatus->fetch(PDO::FETCH_ASSOC);
+                    $orderStatus = $orderStatusRow['status'] ?? 'pending';
+                    ?>
                     <tr>
                         <td>#<?php echo htmlspecialchars($order['id']); ?></td>
                         <td><?php echo htmlspecialchars($order['company_name']); ?></td>
                         <td><?php echo htmlspecialchars($order['user_email']); ?></td>
                         <td><?php echo number_format($order['total_ksh'], 2); ?></td>
                         <td>
-                            <span class="status-badge status-approved">Completed</span>
+                            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
+                                <form method="POST" style="display:inline-block; margin:0;">
+                                    <input type="hidden" name="update_status_order_id" value="<?php echo $order['id']; ?>">
+                                    <select name="order_status" onchange="this.form.submit()" style="padding:0.3em 0.7em; border-radius:4px; border:1px solid #ccc;">
+                                        <option value="pending" <?php if ($orderStatus === 'pending') echo 'selected'; ?>>Pending</option>
+                                        <option value="confirmed" <?php if ($orderStatus === 'confirmed') echo 'selected'; ?>>Confirmed</option>
+                                    </select>
+                                </form>
+                            <?php else: ?>
+                                <span class="status-badge status-<?php echo htmlspecialchars($orderStatus); ?>"><?php echo ucfirst($orderStatus); ?></span>
+                            <?php endif; ?>
                         </td>
                         <td><?php echo date('M d, Y', strtotime($order['created_at'])); ?></td>
                         <td style="text-align:center; width:40px;">
@@ -234,7 +264,15 @@ if ($orderIds) {
                                         <strong>Order Address:</strong> <?php echo htmlspecialchars($order['address']); ?>
                                     </div>
                                 <?php endif; ?>
+                                <?php
+                                // Fetch order status for this order
+                                $stmtStatus = $pdo->prepare('SELECT status FROM orders WHERE id = ?');
+                                $stmtStatus->execute([$order['id']]);
+                                $orderStatusRow = $stmtStatus->fetch(PDO::FETCH_ASSOC);
+                                $orderStatus = $orderStatusRow['status'] ?? 'pending';
+                                ?>
                                 <div style="margin-top:1.5rem; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                                    <?php if (in_array($orderStatus, ['confirmed'])): ?>
                                     <form method="POST" class="assign-driver-form" data-order-id="<?php echo $order['id']; ?>" style="display:flex; gap:1rem; align-items:center; margin:0;">
                                         <input type="hidden" name="assign_driver_order_id" value="<?php echo $order['id']; ?>">
                                         <label for="driver_name_<?php echo $order['id']; ?>" style="font-weight:600; color:var(--xobo-primary); margin:0;">Assign Driver:</label>
@@ -246,12 +284,23 @@ if ($orderIds) {
                                             <!-- Remove the old driver label from below the buttons -->
                                         <?php endif; ?>
                                     </form>
+                                    <?php else: ?>
+                                        <div style="color: #888; font-style: italic;">Assign a driver after confirming the order.</div>
+                                    <?php endif; ?>
                                     <a href="<?php echo BASE_URL; ?>/shop/order-receipt?order_id=<?php echo $order['id']; ?>" class="btn btn-primary btn-sm align-btns" style="width: 140px; height: 40px; text-align: center; display: flex; align-items: center; justify-content: center;">
                                         <span style="display: flex; align-items: center; justify-content: center; width: 100%;">
                                             <i class="fas fa-eye" style="margin-right: 0.4em;"></i>
                                             <span>View Receipt</span>
                                         </span>
                                     </a>
+                                    <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
+                                        <a href="edit-order.php?id=<?php echo $order['id']; ?>" class="btn btn-secondary btn-sm align-btns" style="width: 140px; height: 40px; text-align: center; display: flex; align-items: center; justify-content: center;">
+                                            <span style="display: flex; align-items: center; justify-content: center; width: 100%;">
+                                                <i class="fas fa-edit" style="margin-right: 0.4em;"></i>
+                                                <span>Edit</span>
+                                            </span>
+                                        </a>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </td>
@@ -389,6 +438,25 @@ button[name="delete_all_orders"]:active {
     filter: none !important;
     transition: none !important;
     cursor: pointer;
+}
+.status-badge {
+    display: inline-block;
+    padding: 0.3em 0.9em;
+    border-radius: 12px;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #fff;
+    background: #888;
+    text-transform: capitalize;
+    margin-right: 0.3em;
+}
+.status-pending {
+    background: #f1c40f;
+    color: #333;
+}
+.status-confirmed {
+    background: #27ae60;
+    color: #fff;
 }
 </style>
 

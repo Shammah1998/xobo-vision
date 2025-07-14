@@ -3,7 +3,7 @@ include 'includes/admin_header.php';
 require_once '../config/db.php';
 
 function fetchAllUsers($pdo, $search = '') {
-    $sql = "SELECT u.*, c.name as company_name FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.role IN ('user', 'company_admin')";
+    $sql = "SELECT u.*, c.name as company_name FROM users u LEFT JOIN companies c ON u.company_id = c.id WHERE u.role IN ('user', 'admin_user')";
     $params = [];
     if ($search) {
         $sql .= ' AND (u.email LIKE ? OR c.name LIKE ?)';
@@ -24,26 +24,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['edit_user_id'])) {
     $email = trim($_POST['email']);
     $role = $_POST['role'];
     $password = $_POST['password'];
-    try {
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new Exception('Invalid email address.');
+    $name = isset($_POST['name']) ? trim($_POST['name']) : null;
+    $phone = isset($_POST['phone']) ? trim($_POST['phone']) : null;
+    // Only super_admin or admin can assign admin_user or user roles
+    if (in_array($role, ['admin_user', 'user']) && !in_array($_SESSION['role'], ['super_admin', 'admin'])) {
+        $error = 'You do not have permission to assign this role.';
+    } else {
+        try {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new Exception('Invalid email address.');
+            }
+            $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? AND id != ?');
+            $stmt->execute([$email, $userId]);
+            if ($stmt->fetch()) {
+                throw new Exception('Email already in use by another user.');
+            }
+            if ($password) {
+                $hashed = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare('UPDATE users SET email = ?, name = ?, phone = ?, role = ?, password = ? WHERE id = ?');
+                $stmt->execute([$email, $name, $phone, $role, $hashed, $userId]);
+            } else {
+                $stmt = $pdo->prepare('UPDATE users SET email = ?, name = ?, phone = ?, role = ? WHERE id = ?');
+                $stmt->execute([$email, $name, $phone, $role, $userId]);
+            }
+            $message = 'User updated successfully!';
+        } catch (Exception $e) {
+            $error = $e->getMessage();
         }
-        $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ? AND id != ?');
-        $stmt->execute([$email, $userId]);
-        if ($stmt->fetch()) {
-            throw new Exception('Email already in use by another user.');
-        }
-        if ($password) {
-            $hashed = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $pdo->prepare('UPDATE users SET email = ?, role = ?, password = ? WHERE id = ?');
-            $stmt->execute([$email, $role, $hashed, $userId]);
-        } else {
-            $stmt = $pdo->prepare('UPDATE users SET email = ?, role = ? WHERE id = ?');
-            $stmt->execute([$email, $role, $userId]);
-        }
-        $message = 'User updated successfully!';
-    } catch (Exception $e) {
-        $error = $e->getMessage();
     }
 }
 
@@ -74,10 +81,19 @@ if ($userId > 0) {
                 <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($user['email']); ?>" required style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px;">
             </div>
             <div class="form-group">
+                <label for="name" style="font-weight: 600; color: var(--xobo-primary);">Full Name</label>
+                <input type="text" name="name" id="name" value="<?php echo htmlspecialchars($user['name'] ?? ''); ?>" required style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <div class="form-group">
+                <label for="phone" style="font-weight: 600; color: var(--xobo-primary);">Phone Number</label>
+                <input type="text" name="phone" id="phone" value="<?php echo htmlspecialchars($user['phone'] ?? ''); ?>" style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px;">
+            </div>
+            <div class="form-group">
                 <label for="role" style="font-weight: 600; color: var(--xobo-primary);">Role</label>
                 <select name="role" id="role" required style="padding: 0.7rem; border: 1px solid #ccc; border-radius: 4px;">
                     <option value="super_admin" <?php if ($user['role'] === 'super_admin') echo 'selected'; ?>>Super Admin</option>
-                    <option value="company_admin" <?php if ($user['role'] === 'company_admin') echo 'selected'; ?>>Company Admin</option>
+                    <option value="admin" <?php if ($user['role'] === 'admin') echo 'selected'; ?>>Admin</option>
+                    <option value="admin_user" <?php if ($user['role'] === 'admin_user') echo 'selected'; ?>>Admin-User</option>
                     <option value="user" <?php if ($user['role'] === 'user') echo 'selected'; ?>>User</option>
                 </select>
             </div>

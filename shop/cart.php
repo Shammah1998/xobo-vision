@@ -223,7 +223,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $row['recipient_phone']
                     ]);
                 }
-                
                 // Insert accessories for each product that has them
                 if (!empty($_SESSION['cart_accessories'])) {
                     foreach ($_SESSION['cart_accessories'] as $mainProductId => $accessories) {
@@ -240,16 +239,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 }
-                
                 // Clear cart and delivery details
                 unset($_SESSION['cart']);
                 unset($_SESSION['cart_accessories']);
                 $stmt = $pdo->prepare('DELETE FROM delivery_details WHERE user_id = ? AND session_id = ?');
                 $stmt->execute([$userId, session_id()]);
                 $pdo->commit();
-                // Redirect to order receipt
+                // --- Custom logic for normal user ---
+                if (isset($_SESSION['role']) && $_SESSION['role'] === 'user') {
+                    // Fetch the name of the user who placed the order
+                    $stmtUser = $pdo->prepare('SELECT name FROM users WHERE id = ?');
+                    $stmtUser->execute([$userId]);
+                    $orderUser = $stmtUser->fetch(PDO::FETCH_ASSOC);
+                    $orderUserName = $orderUser ? $orderUser['name'] : 'User';
+                    // Fetch admin_user(s) for this company and send notification
+                    require_once '../vendor/phpmailer/phpmailer/src/PHPMailer.php';
+                    require_once '../vendor/phpmailer/phpmailer/src/SMTP.php';
+                    require_once '../vendor/phpmailer/phpmailer/src/Exception.php';
+                    $stmt = $pdo->prepare("SELECT email, name FROM users WHERE company_id = ? AND role = 'admin_user'");
+                    $stmt->execute([$companyId]);
+                    $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    if ($admins) {
+                        foreach ($admins as $admin) {
+                            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+                            try {
+                                $mail->isSMTP();
+                                $mail->Host = SMTP_HOST;
+                                $mail->SMTPAuth = true;
+                                $mail->Username = SMTP_USER;
+                                $mail->Password = SMTP_PASS;
+                                $mail->SMTPSecure = SMTP_SECURE;
+                                $mail->Port = SMTP_PORT;
+                                $mail->setFrom(SMTP_FROM, APP_NAME);
+                                $mail->addAddress($admin['email'], $admin['name']);
+                                $mail->isHTML(true);
+                                $mail->Subject = 'New Order Placed by User';
+                                $mail->Body = '<div style="color:#333;font-family:sans-serif;font-size:16px;">'
+                                    . '<p>Hello ' . htmlspecialchars($admin['name']) . ',</p>'
+                                    . '<p>A new order (Order ID: <strong>#' . htmlspecialchars($orderId) . '</strong>) has been placed by <strong>' . htmlspecialchars($orderUserName) . '</strong> in your company. Please log in to the admin panel to review and confirm the order.</p>'
+                                    . '<p><a href="https://panel.xobodelivery.co.ke/shop/orders" style="background:#16234d;color:#fff;padding:10px 20px;border-radius:4px;text-decoration:none;">View Orders</a></p>'
+                                    . '<p style="color:#888;font-size:13px;">This is an automated notification from XOBO DELIVERY.</p>'
+                                    . '</div>';
+                                $mail->send();
+                            } catch (Exception $e) {
+                                error_log('Mailer Error: ' . $mail->ErrorInfo);
+                                echo '<div style="color:red;max-width:600px;margin:1rem auto;text-align:center;font-size:1rem;">Mailer Error: ' . htmlspecialchars($mail->ErrorInfo) . '</div>';
+                            }
+                        }
+                    } else {
+                        echo '<div style="color:red;max-width:600px;margin:1rem auto;text-align:center;font-size:1rem;">No admin user found for this company. Please ensure at least one admin_user exists with a valid email.</div>';
+                    }
+                    // Show message and redirect to index.php
+                    echo '<div class="alert alert-success" style="margin:2rem auto;max-width:600px;text-align:center;font-size:1.2rem;">The admin user has received your order and will confirm shortly.<br>Redirecting to home...</div>';
+                    echo '<script>setTimeout(function(){ window.location.href = "../index.php"; }, 2500);</script>';
+                    exit;
+                } else {
+                    // Admin user: redirect to order receipt
                 header('Location: order-receipt.php?order_id=' . $orderId);
                 exit;
+                }
             } catch (Exception $e) {
                 $pdo->rollBack();
                 $error = 'Order could not be completed. Please try again.';

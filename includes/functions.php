@@ -26,17 +26,14 @@ function isAdmin($pdo = null) {
         global $pdo;
     }
     if (!isLoggedIn()) return false;
-    
-    // Check if user has super_admin or admin role
+    // Only allow super_admin and admin
     if (isset($_SESSION['role']) && ($_SESSION['role'] === 'super_admin' || $_SESSION['role'] === 'admin')) {
         return true;
     }
-    
-    // Check if user is the first user in database
+    // Optionally: keep first user as super_admin
     if ($pdo && isFirstUser($pdo, $_SESSION['user_id'])) {
         return true;
     }
-    
     return false;
 }
 
@@ -51,16 +48,14 @@ function redirectByRole() {
         header('Location: ' . BASE_URL . '/auth/login');
         exit;
     }
-    
     switch ($_SESSION['role']) {
         case 'super_admin':
+        case 'admin':
             header('Location: ' . BASE_URL . '/admin/dashboard');
             break;
-        case 'company_admin':
-            header('Location: ' . BASE_URL . '/company/products');
-            break;
+        case 'admin_user':
         case 'user':
-            header('Location: ' . BASE_URL . '/shop/shop?cid=' . $_SESSION['company_id']);
+            header('Location: ' . BASE_URL . '/index');
             break;
         default:
             header('Location: ' . BASE_URL . '/auth/login');

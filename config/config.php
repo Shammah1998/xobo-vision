@@ -26,12 +26,21 @@ define('DB_USER', 'root');
 define('DB_PASS', '');
 
 // Application settings
-define('APP_NAME', 'XOBO MART');
+define('APP_NAME', 'XOBO DELIVERY');
 define('APP_VERSION', '1.0.0');
 
 // File upload settings
 define('UPLOAD_DIR', 'assets/images/');
 define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5MB
+
+// SMTP configuration for PHPMailer
+// Replace these with your actual SMTP server details
+if (!defined('SMTP_HOST')) define('SMTP_HOST', 'mail.xobodelivery.co.ke');
+if (!defined('SMTP_USER')) define('SMTP_USER', 'noreply@xobodelivery.co.ke');
+if (!defined('SMTP_PASS')) define('SMTP_PASS', '@xobomart2025');
+if (!defined('SMTP_SECURE')) define('SMTP_SECURE', 'ssl');
+if (!defined('SMTP_PORT')) define('SMTP_PORT', 465);
+if (!defined('SMTP_FROM')) define('SMTP_FROM', 'noreply@xobodelivery.co.ke');
 
 // Error reporting (disable in production)
 if ($isLocal) {

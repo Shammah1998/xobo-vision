@@ -37,6 +37,9 @@ require_once __DIR__ . '/../config/db.php';
                                 <small><?php echo htmlspecialchars($_SESSION['role']); ?></small>
                             </div>
                             <div class="dropdown-divider"></div>
+                            <a href="<?php echo BASE_URL; ?>/profile" class="dropdown-item">
+                                <i class="fas fa-user"></i> Profile
+                            </a>
                             <a href="<?php echo BASE_URL; ?>/auth/logout" class="dropdown-item logout-link">
                                 <i class="fas fa-sign-out-alt"></i> Logout
                             </a>

@@ -1,0 +1,7 @@
+{
+    "name": "xobo/xobo-delivery",
+    "description": "Xobo Delivery Platform",
+    "require": {
+        "phpmailer/phpmailer": "^6.10"
+    }
+}

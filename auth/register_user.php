@@ -18,9 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = sanitize($_POST['email']);
     $password = $_POST['password'];
     $confirmPassword = $_POST['confirm_password'];
+    $name = isset($_POST['name']) ? sanitize($_POST['name']) : null;
+    $phone = isset($_POST['phone']) ? sanitize($_POST['phone']) : null;
     
     // Validation
-    if (empty($companyName) || empty($email) || empty($password) || empty($confirmPassword)) {
+    if (empty($companyName) || empty($email) || empty($password) || empty($confirmPassword) || empty($name)) {
         $error = 'Please fill in all fields.';
     } elseif ($password !== $confirmPassword) {
         $error = 'Passwords do not match.';
@@ -44,8 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     // Insert new user
                     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("INSERT INTO users (company_id, email, password, role) VALUES (?, ?, ?, 'user')");
-                    $stmt->execute([$company['id'], $email, $hashedPassword]);
+                    $stmt = $pdo->prepare("INSERT INTO users (company_id, email, name, phone, password, role) VALUES (?, ?, ?, ?, ?, 'user')");
+                    $stmt->execute([$company['id'], $email, $name, $phone, $hashedPassword]);
                     
                     $success = 'Registration successful! You can now login and start shopping.';
                 }
@@ -240,6 +242,15 @@ include '../includes/header.php';
             <label for="email">Email Address</label>
             <input type="email" id="email" name="email" required 
                    value="<?php echo htmlspecialchars($_POST['email'] ?? ''); ?>">
+        </div>
+
+        <div class="form-group">
+            <label for="name">Full Name *</label>
+            <input type="text" id="name" name="name" required value="<?php echo htmlspecialchars($_POST['name'] ?? ''); ?>" placeholder="Your full name">
+        </div>
+        <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="text" id="phone" name="phone" value="<?php echo htmlspecialchars($_POST['phone'] ?? ''); ?>" placeholder="Phone number (optional)">
         </div>
 
         <div class="form-group">
