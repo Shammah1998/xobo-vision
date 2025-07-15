@@ -71,7 +71,6 @@ RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
 # Exclude admin directory from PHP extension rewrite
-RewriteCond %{REQUEST_URI} !^/xobo-c/admin/
 # If the request does not contain a file extension and a .php file exists, rewrite to .php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

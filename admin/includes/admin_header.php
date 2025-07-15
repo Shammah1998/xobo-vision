@@ -272,14 +272,26 @@ if (!isAdmin($pdo)) {
     <div class="admin-container">
         <!-- Sidebar -->
         <nav class="admin-sidebar">
-            <div class="admin-logo">
-                <h2>XOBO ADMIN</h2>
+            <div class="admin-logo" style="padding: 0; text-align: center;">
+                <?php
+                $logoHref = BASE_URL . '/auth/login';
+                if (isLoggedIn() && isset($_SESSION['role'])) {
+                    if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin') {
+                        $logoHref = BASE_URL . '/admin/dashboard';
+                    } elseif ($_SESSION['role'] === 'user' || $_SESSION['role'] === 'admin_user') {
+                        $logoHref = BASE_URL . '/index';
+                    }
+                }
+                ?>
+                <a href="<?php echo $logoHref; ?>" style="display: flex; flex-direction: column; align-items: center; text-decoration: none;">
+                    <img src="<?php echo BASE_URL; ?>/assets/images/xobo-logo-white.png" alt="XOBO" class="logo" style="max-width: 120px; margin: 0; background: transparent;">
+                </a>
             </div>
             
             <div class="admin-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Dashboard</div>
-                    <a href="<?php echo BASE_URL; ?>/admin/dashboard.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/admin/dashboard" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'dashboard.php' ? 'active' : ''; ?>">
                         <i class="fas fa-tachometer-alt"></i> Overview
                     </a>
                 </div>
@@ -292,7 +304,7 @@ if (!isAdmin($pdo)) {
                     <a href="<?php echo BASE_URL; ?>/admin/create-company" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'create-company.php' ? 'active' : ''; ?>">
                         <i class="fas fa-plus-circle"></i> Create Company
                     </a>
-                    <a href="<?php echo BASE_URL; ?>/admin/all-products.php" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'all-products.php' ? 'active' : ''; ?>">
+                    <a href="<?php echo BASE_URL; ?>/admin/all-products" class="nav-item <?php echo basename($_SERVER['PHP_SELF']) == 'all-products.php' ? 'active' : ''; ?>">
                         <i class="fas fa-box"></i> All Products
                     </a>
                 </div>

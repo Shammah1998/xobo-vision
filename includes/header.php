@@ -18,7 +18,17 @@ require_once __DIR__ . '/../config/db.php';
     <nav class="header">
         <div class="container">
             <div class="nav-brand">
-                <a href="<?php echo BASE_URL; ?>/">
+                <?php
+                $logoHref = BASE_URL . '/auth/login.php';
+                if (isLoggedIn() && isset($_SESSION['role'])) {
+                    if ($_SESSION['role'] === 'admin' || $_SESSION['role'] === 'super_admin') {
+                        $logoHref = BASE_URL . '/admin/dashboard.php';
+                    } elseif ($_SESSION['role'] === 'user' || $_SESSION['role'] === 'admin_user') {
+                        $logoHref = BASE_URL . '/index.php';
+                    }
+                }
+                ?>
+                <a href="<?php echo $logoHref; ?>">
                     <img src="<?php echo BASE_URL; ?>/assets/images/xobo-logo.png" alt="XOBO MART" class="logo">
                 </a>
             </div>

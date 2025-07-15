@@ -8,12 +8,12 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 require_once '../config/db.php';
 require_once '../includes/functions.php';
 
-requireRole(['user']);
+requireRole(['user', 'admin_user']);
 
 $companyId = $_SESSION['company_id'];
 $userId = $_SESSION['user_id'];
-$message = '';
-$error = '';
+$message = isset($_GET['success']) ? $_GET['success'] : '';
+$error = isset($_GET['error']) ? $_GET['error'] : '';
 
 // Add this at the top, after session_start():
 if (isset($_POST['ajax']) && $_POST['ajax'] === 'update_quantity') {
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "You haven't selected any item";
         }
     } elseif (isset($_POST['save_delivery_details'])) {
-        // Handle saving delivery details
+        // Handle saving delivery details for individual item
         $productId = (int)$_POST['product_id'];
         $pickUp = sanitize($_POST['destination'] ?? '');
         $dropOff = sanitize($_POST['company_name'] ?? '');
@@ -70,33 +70,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $recipientName = sanitize($_POST['recipient_name'] ?? '');
         $recipientPhone = sanitize($_POST['recipient_phone'] ?? '');
         
-        // Require both destination and company name
+        // Get product name for better user feedback
+        $stmt = $pdo->prepare("SELECT name FROM products WHERE id = ? AND company_id = ?");
+        $stmt->execute([$productId, $companyId]);
+        $productName = $stmt->fetchColumn() ?: 'Product';
+        
+        // Require both pick up and drop off locations
         if (!empty($pickUp) && !empty($dropOff)) {
-            $stmt = $pdo->prepare("INSERT INTO delivery_details (user_id, product_id, session_id, pick_up, drop_off, additional_notes, recipient_name, recipient_phone) 
-                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
+            $stmt = $pdo->prepare("INSERT INTO delivery_details (user_id, product_id, session_id, pick_up, drop_off, additional_notes, recipient_name, recipient_phone, created_at, updated_at) 
+                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW()) 
                                    ON DUPLICATE KEY UPDATE 
                                    pick_up = VALUES(pick_up), 
                                    drop_off = VALUES(drop_off), 
                                    additional_notes = VALUES(additional_notes), 
                                    recipient_name = VALUES(recipient_name), 
                                    recipient_phone = VALUES(recipient_phone),
-                                   updated_at = CURRENT_TIMESTAMP");
+                                   updated_at = NOW()");
             $stmt->execute([$userId, $productId, session_id(), $pickUp, $dropOff, $additionalNotes, $recipientName, $recipientPhone]);
-            $message = "Delivery details saved successfully!";
+            $message = "Delivery details saved successfully for " . htmlspecialchars($productName) . "!";
+            
+            // Redirect to refresh and show updated status indicators
+            header('Location: ' . $_SERVER['REQUEST_URI'] . '?success=' . urlencode($message));
+            exit;
         } else if (empty($pickUp) && empty($dropOff) && empty($additionalNotes) && empty($recipientName) && empty($recipientPhone)) {
             // Delete if all fields are empty
             $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND product_id = ? AND session_id = ?");
             $stmt->execute([$userId, $productId, session_id()]);
-            $message = "Delivery details cleared!";
+            $message = "Delivery details cleared for " . htmlspecialchars($productName) . "!";
+            
+            // Redirect to refresh and show updated status indicators
+            header('Location: ' . $_SERVER['REQUEST_URI'] . '?success=' . urlencode($message));
+            exit;
         } else {
-            $error = "Please fill in both Destination and Company Name.";
+            $error = "Please fill in both Pick Up and Drop Off locations for " . htmlspecialchars($productName) . ".";
         }
     } elseif (isset($_POST['delete_delivery_details'])) {
-        // Handle deleting delivery details
+        // Handle deleting delivery details for individual item
         $productId = (int)$_POST['product_id'];
+        
+        // Get product name for better user feedback
+        $stmt = $pdo->prepare("SELECT name FROM products WHERE id = ? AND company_id = ?");
+        $stmt->execute([$productId, $companyId]);
+        $productName = $stmt->fetchColumn() ?: 'Product';
+        
         $stmt = $pdo->prepare("DELETE FROM delivery_details WHERE user_id = ? AND product_id = ? AND session_id = ?");
         $stmt->execute([$userId, $productId, session_id()]);
-        $message = "Delivery details deleted successfully!";
+        $message = "Delivery details deleted successfully for " . htmlspecialchars($productName) . "!";
+        
+        // Redirect to refresh and show updated status indicators
+        header('Location: ' . $_SERVER['REQUEST_URI'] . '?success=' . urlencode($message));
+        exit;
     } elseif (isset($_POST['fill_all'])) {
         // Handle Fill All Delivery Details for all cart items
         $pickUp = sanitize($_POST['destination'] ?? '');
@@ -1644,6 +1667,33 @@ function toggleAccessoriesRow(productId) {
         row.style.display = 'none';
         button.classList.remove('expanded');
         icon.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Delete delivery details for individual item
+function deleteDeliveryDetails(productId) {
+    if (confirm('Are you sure you want to delete the delivery details for this item?')) {
+        // Create a form and submit it to delete delivery details
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '';
+        
+        // Add product ID
+        const productInput = document.createElement('input');
+        productInput.type = 'hidden';
+        productInput.name = 'product_id';
+        productInput.value = productId;
+        form.appendChild(productInput);
+        
+        // Add delete action
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'delete_delivery_details';
+        actionInput.value = '1';
+        form.appendChild(actionInput);
+        
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 

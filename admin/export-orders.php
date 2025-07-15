@@ -3,16 +3,15 @@
 require_once '../config/db.php';
 require_once '../includes/functions.php';
 
-// Only allow admins
+// Allow admins and admin_user
 session_start();
 if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
     header('Location: ../auth/login.php?error=Session expired, please log in again.');
     exit;
 }
-if (!isAdmin($pdo)) {
-    header('HTTP/1.0 403 Forbidden');
-    exit('Access denied');
-}
+
+// Allow admin, super_admin, and admin_user roles
+requireRole(['admin_user']);
 
 header('Content-Type: text/csv');
 header('Content-Disposition: attachment; filename="orders_export_' . date('Ymd_His') . '.csv"');
@@ -23,6 +22,13 @@ $toDate = isset($_GET['to_date']) ? trim($_GET['to_date']) : '';
 
 $where = [];
 $params = [];
+
+// If admin_user, filter by company
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user' && isset($_SESSION['company_id'])) {
+    $where[] = 'o.company_id = ?';
+    $params[] = $_SESSION['company_id'];
+}
+
 if ($orderIdSearch !== '') {
     $where[] = 'o.id LIKE ?';
     $params[] = "%$orderIdSearch%";

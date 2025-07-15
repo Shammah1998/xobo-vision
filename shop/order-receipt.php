@@ -8,7 +8,7 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 require_once '../config/db.php';
 require_once '../includes/functions.php';
 
-requireRole(['user', 'super_admin', 'company_admin']);
+requireRole(['user', 'admin_user', 'super_admin', 'company_admin']);
 
 $orderId = isset($_GET['order_id']) ? (int)$_GET['order_id'] : 0;
 $userId = $_SESSION['user_id'];
@@ -27,17 +27,17 @@ if (isAdmin($pdo) || $role === 'company_admin') {
     $buttonUrl = '../admin/orders';
     $buttonText = '<i class="fas fa-arrow-left"></i> Back to Orders';
     $buttonClass = 'back-button';
-} else if (strpos($referer, 'shop/orders') !== false) {
-    // If user came from the user orders page
+} else if ($role === 'admin_user' || strpos($referer, 'shop/orders') !== false) {
+    // If admin_user or user came from the shop orders page
     $buttonUrl = 'orders';
     $buttonText = '<i class="fas fa-arrow-left"></i> Back to Orders';
     $buttonClass = 'back-button';
 }
 
-// Determine the home URL based on role and referrer
-$homeUrl = '../index';  // Default URL for regular users
-if (isAdmin($pdo) || $role === 'company_admin') {
-    $homeUrl = '../admin/dashboard';
+// Determine the home URL based on role
+$homeUrl = '../index.php';  // Default for user and admin_user
+if ($role === 'admin' || $role === 'super_admin') {
+    $homeUrl = '../admin/dashboard.php';
 }
 
 global $pdo;
@@ -46,7 +46,7 @@ if (!$orderId) {
     exit;
 }
 
-// If admin, fetch by order_id only. If not, restrict by user_id and company_id.
+// If admin or super_admin, fetch by order_id only. If admin_user, restrict by company. If user, restrict by user_id and company_id.
 if (isAdmin($pdo) || $role === 'company_admin') {
     $stmt = $pdo->prepare("SELECT o.*, c.name as company_name, u.email as user_email 
                            FROM orders o 
@@ -54,7 +54,16 @@ if (isAdmin($pdo) || $role === 'company_admin') {
                            JOIN users u ON o.user_id = u.id 
                            WHERE o.id = ?");
     $stmt->execute([$orderId]);
+} else if ($role === 'admin_user') {
+    // admin_user can view any order from their company
+    $stmt = $pdo->prepare("SELECT o.*, c.name as company_name, u.email as user_email 
+                           FROM orders o 
+                           JOIN companies c ON o.company_id = c.id 
+                           JOIN users u ON o.user_id = u.id 
+                           WHERE o.id = ? AND o.company_id = ?");
+    $stmt->execute([$orderId, $companyId]);
 } else {
+    // Regular users can only view their own orders
     $stmt = $pdo->prepare("SELECT o.*, c.name as company_name, u.email as user_email 
                            FROM orders o 
                            JOIN companies c ON o.company_id = c.id 

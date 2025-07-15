@@ -8,11 +8,8 @@ if (!isset($_SESSION['user_id']) || empty($_SESSION['user_id'])) {
 require_once '../includes/functions.php';
 require_once '../config/db.php';
 
-// Check access - only admin_user can edit orders
-if ($_SESSION['role'] !== 'admin_user') {
-    header('Location: ' . BASE_URL . '/index');
-    exit;
-}
+// Check access - allow admin_user and other admin roles
+requireRole(['admin_user']);
 
 // Check order ID
 $orderId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -21,15 +18,25 @@ if (!$orderId) {
     exit;
 }
 
-// Check if order exists and belongs to company
+// Check if order exists and belongs to company (for admin_user only)
 $companyId = $_SESSION['company_id'] ?? null;
 try {
-    $stmt = $pdo->prepare('SELECT * FROM orders WHERE id = ? AND company_id = ?');
-    $stmt->execute([$orderId, $companyId]);
+    if ($_SESSION['role'] === 'admin_user') {
+        // admin_user can only edit orders from their company
+        $stmt = $pdo->prepare('SELECT * FROM orders WHERE id = ? AND company_id = ?');
+        $stmt->execute([$orderId, $companyId]);
+    } else {
+        // admin and super_admin can edit orders from any company
+        $stmt = $pdo->prepare('SELECT * FROM orders WHERE id = ?');
+        $stmt->execute([$orderId]);
+    }
     $order = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$order) {
-        header('Location: ../shop/orders.php?error=' . urlencode('Order not found or does not belong to your company'));
+        $errorMsg = ($_SESSION['role'] === 'admin_user') 
+            ? 'Order not found or does not belong to your company'
+            : 'Order not found';
+        header('Location: ../shop/orders.php?error=' . urlencode($errorMsg));
         exit;
     }
 } catch (PDOException $e) {

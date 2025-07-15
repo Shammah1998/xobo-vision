@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['email'] = $user['email'];
                     $_SESSION['role'] = $user['role'];
                     $_SESSION['company_id'] = $user['company_id'];
-                    // Only super_admin and admin can access admin panel
+                    // Only super_admin and admin go to dashboard
                     if (in_array($user['role'], ['super_admin', 'admin'])) {
                         header('Location: ' . BASE_URL . '/admin/dashboard');
                     } else {
