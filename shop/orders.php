@@ -13,6 +13,13 @@ requireRole(['user', 'admin_user']);
 $userId = $_SESSION['user_id'];
 $companyId = $_SESSION['company_id'];
 $success = isset($_GET['success']) ? 'Order placed successfully!' : '';
+$role = $_SESSION['role'] ?? '';
+
+// --- VIEW ALL TOGGLE LOGIC FOR NORMAL USERS ---
+$viewAll = false;
+if ($role === 'user' && isset($_GET['view']) && $_GET['view'] === 'all') {
+    $viewAll = true;
+}
 
 if (empty($companyId)) {
     header('Location: ' . BASE_URL . '/auth/login?error=' . urlencode('You must be associated with a company to view orders.'));
@@ -42,16 +49,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_order_id'])) 
     }
 }
 
-// Fetch orders for the user's company from the database
-$stmt = $pdo->prepare("
-    SELECT o.*, c.name AS company_name, u.email AS user_email
-    FROM orders o
-    JOIN companies c ON o.company_id = c.id
-    JOIN users u ON o.user_id = u.id
-    WHERE o.company_id = ?
-    ORDER BY o.created_at DESC
-");
-$stmt->execute([$companyId]);
+// Fetch orders for the user's company or for the user, depending on role
+if ($role === 'admin_user' || $role === 'company_admin' || $role === 'super_admin') {
+    $stmt = $pdo->prepare("
+        SELECT o.*, c.name AS company_name, u.email AS user_email
+        FROM orders o
+        JOIN companies c ON o.company_id = c.id
+        JOIN users u ON o.user_id = u.id
+        WHERE o.company_id = ?
+        ORDER BY o.created_at DESC
+    ");
+    $stmt->execute([$companyId]);
+} elseif ($role === 'user' && $viewAll) {
+    // Normal user: view all confirmed orders in the database
+    $stmt = $pdo->prepare("
+        SELECT o.*, c.name AS company_name, u.email AS user_email
+        FROM orders o
+        JOIN companies c ON o.company_id = c.id
+        JOIN users u ON o.user_id = u.id
+        WHERE o.status = 'confirmed'
+        ORDER BY o.created_at DESC
+    ");
+    $stmt->execute();
+} else {
+    // Normal user: only see their own orders
+    $stmt = $pdo->prepare("
+        SELECT o.*, c.name AS company_name, u.email AS user_email
+        FROM orders o
+        JOIN companies c ON o.company_id = c.id
+        JOIN users u ON o.user_id = u.id
+        WHERE o.company_id = ? AND o.user_id = ?
+        ORDER BY o.created_at DESC
+    ");
+    $stmt->execute([$companyId, $userId]);
+}
 $db_orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch drivers for these orders
@@ -189,23 +220,45 @@ include '../includes/header.php';
     <?php endif; ?>
 
     <div class="catalog-section">
-        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
-            <div class="btn-csv-container">
+        <div style="display: flex; justify-content: flex-end; align-items: center; gap: 1em; margin-top: 1.2rem; margin-right: 2.2rem; margin-bottom: 1rem;">
+            <?php if ($role === 'user'): ?>
+                <form id="orderViewForm" method="get" action="orders.php" class="order-view-form" style="position:relative;">
+                    <select id="orderViewSelect" name="view" class="order-view-select">
+                        <option value="" style="color:#222; background:#fff;">My Orders</option>
+                        <option value="all" <?php if ($viewAll) echo 'selected'; ?> style="color:#222; background:#fff;">All Confirmed Orders</option>
+                    </select>
+                    <span class="order-view-chevron">
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 8L10 12L14 8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </form>
+                <script>
+                document.getElementById('orderViewSelect').addEventListener('change', function() {
+                    document.getElementById('orderViewForm').submit();
+                });
+                </script>
+            <?php endif; ?>
+            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
                 <a href="../admin/export-orders.php" target="_blank" class="btn btn-primary">
                     <i class="fas fa-download"></i> Download CSV
                 </a>
-            </div>
-        <?php endif; ?>
+            <?php endif; ?>
+        </div>
         <div id="table-scrollbar-top" class="table-scrollbar-top"></div>
         <div class="catalog-table-container" id="table-scrollbar-bottom">
             <?php if (empty($orders)): ?>
-                <div class="empty-catalog">
-                    <i class="fas fa-box-open"></i>
-                    <h4>No orders found</h4>
-                    <p>No orders have been placed by your company yet.</p>
-                    <a href="<?php echo BASE_URL; ?>/index" class="btn btn-primary">
-                        <i class="fas fa-shopping-cart"></i> Start Shopping
-                    </a>
+                <div class="empty-catalog improved-empty-catalog">
+                    <div class="empty-catalog-content">
+                        <span class="empty-catalog-icon"><i class="fas fa-box-open"></i></span>
+                        <div class="empty-catalog-text">
+                            <h4>No orders found</h4>
+                            <p>No orders have been placed by your company yet.</p>
+                            <a href="<?php echo BASE_URL; ?>/index" class="btn btn-primary">
+                                <i class="fas fa-shopping-cart"></i> Start Shopping
+                            </a>
+                        </div>
+                    </div>
                 </div>
             <?php else: ?>
                 <table class="catalog-table">
@@ -219,7 +272,6 @@ include '../includes/header.php';
                             <th class="address-col">Delivery Address</th>
                             <th class="status-col">Status</th>
                             <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
-
                                 <th class="actions-col">Actions</th>
                             <?php endif; ?>
                             <th class="driver-col">Driver</th>
@@ -248,8 +300,11 @@ include '../includes/header.php';
                                     <?php
                                     $status = $db_orders[array_search($order['id'], array_column($db_orders, 'id'))]['status'];
                                     $statusText = ucfirst($status);
-                                    $statusClass = $status === 'confirmed' ? 'status-confirmed' : 'status-pending';
-                                    echo '<span class="status-text ' . $statusClass . '">' . $statusText . '</span>';
+                                    if ($status === 'confirmed') {
+                                        echo '<span class="btn-receipt-long-narrow" style="pointer-events:none;cursor:default;">' . $statusText . '</span>';
+                                    } else {
+                                        echo '<span class="btn-receipt-long-narrow" style="background:#dc3545;color:#fff;pointer-events:none;cursor:default;">' . $statusText . '</span>';
+                                    }
                                     ?>
                                 </td>
                                 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
@@ -565,33 +620,22 @@ include '../includes/header.php';
     white-space: nowrap;
     text-align: left;
 }
-.status-text.status-pending {
-    color: #fff;
-    background: #e53935;
-    border-radius: 6px;
-    padding: 0.25rem 0.9rem;
-    font-size: 1rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    height: 36px;
-    min-width: 70px;
-    justify-content: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-}
+.status-text.status-pending,
 .status-text.status-confirmed {
-    color: #fff;
-    background: var(--xobo-primary);
-    border-radius: 6px;
-    padding: 0.25rem 0.9rem;
+    color: #444;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 999px;
+    padding: 0.25rem 1.1rem;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 500;
     display: inline-flex;
     align-items: center;
-    height: 36px;
+    height: 32px;
     min-width: 70px;
     justify-content: center;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    box-shadow: none;
+    letter-spacing: 0.01em;
 }
 .actions-buttons {
     display: flex;
@@ -667,6 +711,101 @@ include '../includes/header.php';
     margin-top: 1.2rem;
     margin-right: 2.2rem;
     margin-bottom: 1rem;
+}
+/* Custom style for order view form and select */
+.order-view-form {
+    display: flex;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 0.4em 1em;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(22,35,77,0.06);
+    margin: 0;
+    position: relative;
+}
+.order-view-select {
+    min-width: 170px;
+    padding: 0.5em 2.5em 0.5em 1em; /* extra right padding for icon */
+    border-radius: 6px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: var(--xobo-primary);
+    box-shadow: 0 2px 6px rgba(37,99,235,0.08);
+    transition: none;
+    outline: none;
+    appearance: none;
+    cursor: pointer;
+}
+.order-view-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #2563eb33;
+}
+.order-view-select:hover,
+.order-view-select:active {
+    background: var(--xobo-primary); /* No hover color change */
+    color: #fff;
+}
+.order-view-select option {
+    color: #222;
+    background: #fff;
+}
+.order-view-chevron {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+.order-view-form select::-ms-expand {
+    display: none;
+}
+.order-view-form select::-webkit-inner-spin-button,
+.order-view-form select::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.empty-catalog.improved-empty-catalog {
+    padding: 2.5em 2em 2.5em 2.5em;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 180px;
+}
+.empty-catalog-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5em;
+}
+.empty-catalog-icon {
+    font-size: 2.5em;
+    color: var(--xobo-primary);
+    margin-top: 0.2em;
+    flex-shrink: 0;
+}
+.empty-catalog-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7em;
+    min-width: 220px;
+}
+.empty-catalog-text h4 {
+    margin: 0 0 0.2em 0;
+    font-weight: 700;
+    font-size: 1.2em;
+}
+.empty-catalog-text p {
+    margin: 0 0 0.7em 0;
+    color: #444;
+    font-size: 1em;
+}
+.empty-catalog-text .btn.btn-primary {
+    align-self: flex-start;
+    margin-top: 0.2em;
 }
 </style>
 <script>

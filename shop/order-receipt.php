@@ -63,19 +63,28 @@ if (isAdmin($pdo) || $role === 'company_admin') {
                            WHERE o.id = ? AND o.company_id = ?");
     $stmt->execute([$orderId, $companyId]);
 } else {
-    // Regular users can only view their own orders
+    // Regular users: allow viewing any confirmed order, or their own order (confirmed or not)
     $stmt = $pdo->prepare("SELECT o.*, c.name as company_name, u.email as user_email 
                            FROM orders o 
                            JOIN companies c ON o.company_id = c.id 
                            JOIN users u ON o.user_id = u.id 
-                           WHERE o.id = ? AND o.user_id = ? AND o.company_id = ?");
-    $stmt->execute([$orderId, $userId, $companyId]);
+                           WHERE o.id = ?");
+    $stmt->execute([$orderId]);
 }
 $order = $stmt->fetch();
 
 if (!$order) {
     header('Location: ../index');
     exit;
+}
+
+// Restrict normal users to only view receipts for confirmed orders or their own orders
+if (!isAdmin($pdo) && $role !== 'company_admin' && $role !== 'admin_user') {
+    if ($order['user_id'] != $userId && ($order['status'] ?? '') !== 'confirmed') {
+        // Not their order and not confirmed
+        header('Location: ../index');
+        exit;
+    }
 }
 
 // Get order items with product details

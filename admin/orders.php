@@ -177,17 +177,18 @@ if ($orderIds) {
                         <td><?php echo htmlspecialchars($order['user_email']); ?></td>
                         <td><?php echo number_format($order['total_ksh'], 2); ?></td>
                         <td>
-                            <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
-                                <form method="POST" style="display:inline-block; margin:0;">
-                                    <input type="hidden" name="update_status_order_id" value="<?php echo $order['id']; ?>">
-                                    <select name="order_status" onchange="this.form.submit()" style="padding:0.3em 0.7em; border-radius:4px; border:1px solid #ccc;">
-                                        <option value="pending" <?php if ($orderStatus === 'pending') echo 'selected'; ?>>Pending</option>
-                                        <option value="confirmed" <?php if ($orderStatus === 'confirmed') echo 'selected'; ?>>Confirmed</option>
-                                    </select>
-                                </form>
-                            <?php else: ?>
-                                <span class="status-badge status-<?php echo htmlspecialchars($orderStatus); ?>"><?php echo ucfirst($orderStatus); ?></span>
-                            <?php endif; ?>
+                            <?php
+                            $stmtStatus = $pdo->prepare('SELECT status FROM orders WHERE id = ?');
+                            $stmtStatus->execute([$order['id']]);
+                            $orderStatusRow = $stmtStatus->fetch(PDO::FETCH_ASSOC);
+                            $orderStatus = $orderStatusRow['status'] ?? 'pending';
+                            $statusText = ucfirst($orderStatus);
+                            if ($orderStatus === 'confirmed') {
+                                echo '<span style="display:inline-block;padding:0.3em 1.2em;border-radius:10px;font-size:1em;font-weight:600;color:#fff;background:#172554;text-transform:capitalize;min-width:90px;text-align:center;letter-spacing:0.01em;">' . $statusText . '</span>';
+                            } else {
+                                echo '<span style="display:inline-block;padding:0.3em 1.2em;border-radius:10px;font-size:1em;font-weight:600;color:#fff;background:#dc3545;text-transform:capitalize;min-width:90px;text-align:center;letter-spacing:0.01em;">' . $statusText . '</span>';
+                            }
+                            ?>
                         </td>
                         <td><?php echo date('M d, Y', strtotime($order['created_at'])); ?></td>
                         <td style="text-align:center; width:40px;">
@@ -446,16 +447,17 @@ button[name="delete_all_orders"]:active {
     font-size: 0.95em;
     font-weight: 600;
     color: #fff;
-    background: #888;
+    background: #172554; /* Match the View button background */
     text-transform: capitalize;
     margin-right: 0.3em;
+    border: none;
 }
 .status-pending {
-    background: #f1c40f;
-    color: #333;
+    background: #172554;
+    color: #fff;
 }
 .status-confirmed {
-    background: #27ae60;
+    background: #172554;
     color: #fff;
 }
 </style>
