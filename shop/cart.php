@@ -1606,6 +1606,8 @@ function updateQuantity(productId, change) {
     input.value = newValue;
     // Update session via AJAX
     updateQuantitySession(productId, newValue);
+    // Immediately update totals in the UI
+    recalculateCartTotals();
 }
 
 // Update session quantity via AJAX
@@ -1616,7 +1618,39 @@ function updateQuantitySession(productId, quantity) {
     xhr.send('ajax=update_quantity&product_id=' + encodeURIComponent(productId) + '&quantity=' + encodeURIComponent(quantity));
 }
 
-// Attach event listeners to all quantity inputs for manual changes
+// --- NEW: Recalculate and update cart totals in the DOM ---
+function recalculateCartTotals() {
+    let totalItems = 0;
+    let totalWeight = 0;
+    let totalAmount = 0;
+    document.querySelectorAll('.cart-item-row').forEach(function(row) {
+        const qtyInput = row.querySelector('.qty-input');
+        const unitPriceCell = row.querySelector('.unit-price');
+        const weightCell = row.querySelector('.product-weight');
+        const lineTotalCell = row.querySelector('.line-total');
+        if (!qtyInput || !unitPriceCell || !weightCell || !lineTotalCell) return;
+        const quantity = parseInt(qtyInput.value) || 1;
+        // Remove currency formatting for calculation
+        const unitPrice = parseFloat(unitPriceCell.textContent.replace(/[^\d.]/g, '')) || 0;
+        const weight = parseFloat(weightCell.textContent.replace(/[^\d.]/g, '')) || 0;
+        const lineTotal = quantity * unitPrice;
+        const lineWeight = quantity * weight;
+        // Update line total cell
+        lineTotalCell.textContent = 'KSH ' + lineTotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        totalItems += quantity;
+        totalWeight += lineWeight;
+        totalAmount += lineTotal;
+    });
+    // Update totals in DOM
+    const totalItemsSpan = document.getElementById('total-items');
+    const totalWeightSpan = document.getElementById('total-weight');
+    const totalAmountSpan = document.getElementById('total-amount');
+    if (totalItemsSpan) totalItemsSpan.textContent = totalItems + ' items';
+    if (totalWeightSpan) totalWeightSpan.textContent = totalWeight.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' kg';
+    if (totalAmountSpan) totalAmountSpan.textContent = 'KSH ' + totalAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+
+// --- Call recalculateCartTotals after every quantity change ---
 window.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.qty-input').forEach(function(input) {
         input.addEventListener('change', function() {
@@ -1626,6 +1660,7 @@ window.addEventListener('DOMContentLoaded', function() {
             input.value = val;
             const productId = input.id.replace('qty_', '');
             updateQuantitySession(productId, val);
+            recalculateCartTotals();
         });
         input.addEventListener('blur', function() {
             let val = parseInt(input.value) || 1;
@@ -1634,8 +1669,11 @@ window.addEventListener('DOMContentLoaded', function() {
             input.value = val;
             const productId = input.id.replace('qty_', '');
             updateQuantitySession(productId, val);
+            recalculateCartTotals();
         });
     });
+    // Initial calculation on page load
+    recalculateCartTotals();
 });
 
 // Toggle delivery details section for per-item dropdowns
