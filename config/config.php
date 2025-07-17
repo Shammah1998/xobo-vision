@@ -1,4 +1,5 @@
 <?php
+date_default_timezone_set('Africa/Nairobi');
 // Base configuration for XOBO MART
 
 // Session settings - MUST be set before any session is started

@@ -63,8 +63,8 @@ $toDate = isset($_GET['to_date']) ? trim($_GET['to_date']) : '';
 $where = [];
 $params = [];
 if ($orderIdSearch !== '') {
-    $where[] = 'o.id LIKE ?';
-    $params[] = "%$orderIdSearch%";
+    $where[] = 'o.id = ?';
+    $params[] = (int)$orderIdSearch;
 }
 if ($fromDate && $toDate) {
     $where[] = 'DATE(o.created_at) BETWEEN ? AND ?';
@@ -97,6 +97,7 @@ $orderItems = [];
 $deliveryDetails = [];
 $drivers = [];
 $vehicleTypes = [];
+$accessories = [];
 if ($orderIds) {
     $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
     // Order items
@@ -128,21 +129,25 @@ if ($orderIds) {
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $v) {
         $vehicleTypes[$v['order_id']] = $v['vehicle_type'];
     }
+    
+    // Accessories
+    $stmt = $pdo->prepare('SELECT order_id, main_product_id, accessory_name, accessory_sku, accessory_weight FROM order_accessories WHERE order_id IN (' . $placeholders . ')');
+    $stmt->execute($orderIds);
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $acc) {
+        $accessories[$acc['order_id']][$acc['main_product_id']][] = $acc;
+    }
 }
 ?>
 
 <div class="admin-card">
     <h2 style="margin-bottom: 1rem; color: var(--xobo-primary);">All Orders</h2>
-    <form method="POST" style="display: flex; gap: 1rem; align-items: end; margin-bottom: 1.5rem; flex-wrap: wrap;">
+    <form method="GET" action="" style="display: flex; gap: 1rem; align-items: end; margin-bottom: 1.5rem; flex-wrap: wrap;">
         <input type="text" name="order_id" value="<?php echo htmlspecialchars($orderIdSearch); ?>" placeholder="Order ID" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 120px;">
         <input type="date" name="from_date" value="<?php echo htmlspecialchars($fromDate); ?>" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 160px;">
         <input type="date" name="to_date" value="<?php echo htmlspecialchars($toDate); ?>" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 160px;">
-        <button type="submit" class="btn btn-primary" name="search_orders">Search</button>
+        <button type="submit" class="btn btn-primary" name="search_orders" style="min-width: 100px; height: 40px;">Search</button>
         <?php if ($orderIdSearch || $fromDate || $toDate): ?>
-            <a href="orders" class="btn btn-secondary">Clear</a>
-        <?php endif; ?>
-        <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin_user'): ?>
-        <button type="button" class="btn btn-success" id="download-csv-btn">Download CSV</button>
+            <a href="orders.php" class="btn btn-secondary" style="min-width: 100px; height: 40px; text-align: center; display: inline-flex; align-items: center; justify-content: center;">Clear</a>
         <?php endif; ?>
     </form>
     <?php if (!empty($message)): ?>
@@ -215,11 +220,48 @@ if ($orderIds) {
                                         <tbody>
                                             <?php foreach ($orderItems[$order['id']] as $itemIndex => $item): ?>
                                                 <tr>
-                                                    <td style="padding:0.5rem;"> <?php echo htmlspecialchars($item['name']); ?> </td>
-                                                    <td style="padding:0.5rem;"> <?php echo htmlspecialchars($item['sku']); ?> </td>
-                                                    <td style="padding:0.5rem; text-align:right;"> <?php echo $item['quantity']; ?> </td>
-                                                    <td style="padding:0.5rem; text-align:right;"> <?php echo number_format($item['line_total'], 2); ?> </td>
-                                                    <td style="padding:0.5rem;">
+                                                    <td style="padding:0.5rem; vertical-align: top;">
+                                                        <span style="display: inline-flex; align-items: center;">
+                                                            <?php echo htmlspecialchars($item['name']); ?>
+                                                            <?php if (strtolower(trim($item['name'])) === 'vision plus accessories' && isset($accessories[$order['id']][$item['product_id']])): ?>
+                                                                <button
+                                                                    type="button"
+                                                                    class="accessories-toggle-btn"
+                                                                    onclick="toggleAccessoriesRow(<?php echo $order['id']; ?>, <?php echo $item['product_id']; ?>)"
+                                                                    data-order-id="<?php echo $order['id']; ?>"
+                                                                    data-product-id="<?php echo $item['product_id']; ?>"
+                                                                    aria-expanded="false"
+                                                                    aria-controls="accessories-row-<?php echo $order['id']; ?>-<?php echo $item['product_id']; ?>"
+                                                                    style="
+                                                                        margin-left: 18px;
+                                                                        background: #16234d;
+                                                                        color: #fff;
+                                                                        border: none;
+                                                                        border-radius: 16px;
+                                                                        padding: 0.25em 1.2em;
+                                                                        font-size: 0.95em;
+                                                                        display: flex;
+                                                                        align-items: center;
+                                                                        gap: 0.4em;
+                                                                        cursor: pointer;
+                                                                        transition: background 0.2s;
+                                                                        min-width: 70px;
+                                                                        height: 32px;
+                                                                    "
+                                                                    onmouseover="this.style.background='#23336d';"
+                                                                    onmouseout="this.style.background='#16234d';"
+                                                                >
+                                                                    <i class="fas fa-puzzle-piece"></i>
+                                                                    <span class="accessories-btn-label">View</span>
+                                                                    <i class="fas fa-chevron-down accessories-chevron" style="transition: transform 0.2s;"></i>
+                                                                </button>
+                                                            <?php endif; ?>
+                                                        </span>
+                                                    </td>
+                                                    <td style="padding:0.5rem; vertical-align: top;"> <?php echo htmlspecialchars($item['sku']); ?> </td>
+                                                    <td style="padding:0.5rem; text-align:right; vertical-align: top;"> <?php echo $item['quantity']; ?> </td>
+                                                    <td style="padding:0.5rem; text-align:right; vertical-align: top;"> <?php echo number_format($item['line_total'], 2); ?> </td>
+                                                    <td style="padding:0.5rem; vertical-align: top;">
                                                         <?php $d = $deliveryDetails[$order['id']][$item['product_id']] ?? null; ?>
                                                         <?php if ($d): ?>
                                                             <ul class="delivery-details-list flat-list" style="margin:0; padding-left:1.2em;">
@@ -234,6 +276,35 @@ if ($orderIds) {
                                                         <?php endif; ?>
                                                     </td>
                                                 </tr>
+                                                <?php if (isset($accessories[$order['id']][$item['product_id']])): ?>
+                                                <tr class="accessories-details-row" id="accessories-row-<?php echo $order['id']; ?>-<?php echo $item['product_id']; ?>" style="display:none; background:#f6f8fa;">
+                                                    <td colspan="5" style="padding: 1.2rem 2rem;">
+                                                        <div class="accessory-list" style="margin-top:0;">
+                                                            <div style="font-weight:600; color:var(--xobo-primary); margin-bottom:0.5rem; font-size:1.05rem;">
+                                                                <i class="fas fa-puzzle-piece"></i> Included Accessories
+                                                            </div>
+                                                            <table style="width:100%; border-collapse:collapse; background:transparent;">
+                                                                <thead>
+                                                                    <tr style="background:transparent; color:#888; font-size:0.95em;">
+                                                                        <th style="text-align:left; padding:4px 8px;">Name</th>
+                                                                        <th style="text-align:left; padding:4px 8px;">SKU</th>
+                                                                        <th style="text-align:left; padding:4px 8px;">Weight (kg)</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                <?php foreach ($accessories[$order['id']][$item['product_id']] as $acc): ?>
+                                                                    <tr>
+                                                                        <td style="padding:4px 8px;"><span class="product-name"><?php echo htmlspecialchars($acc['accessory_name']); ?></span></td>
+                                                                        <td style="padding:4px 8px;"><span class="product-sku"><?php echo htmlspecialchars($acc['accessory_sku']); ?></span></td>
+                                                                        <td style="padding:4px 8px;"><span class="product-weight"><?php echo htmlspecialchars($acc['accessory_weight']); ?></span></td>
+                                                                    </tr>
+                                                                <?php endforeach; ?>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <?php endif; ?>
                                             <?php endforeach; ?>
                                             <!-- Driver and Vehicle Type Row -->
                                             <tr>
@@ -249,7 +320,7 @@ if ($orderIds) {
                                                         <?php endif; ?>
                                                         <?php if (!empty($vehicleTypes[$order['id']])): ?>
                                                             <span style="color: var(--xobo-primary); font-weight: 600; font-size: 1em; background: #f8f9fa; padding: 0.3em 1em; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.5em;">
-                                                                Vehicle Type: <?php echo htmlspecialchars($vehicleTypes[$order['id']]); ?>
+                                                                <i class="fas fa-truck"></i> Vehicle: <?php echo htmlspecialchars($vehicleTypes[$order['id']]); ?>
                                                             </span>
                                                         <?php endif; ?>
                                                     </div>
@@ -327,6 +398,16 @@ function toggleOrderDetails(orderId) {
         row.style.display = 'none';
         icon.style.transform = 'rotate(0deg)';
     }
+}
+
+function toggleAccessoriesRow(orderId, productId) {
+    const row = document.getElementById('accessories-row-' + orderId + '-' + productId);
+    const toggleBtn = document.querySelector('.accessories-toggle-btn[data-order-id="' + orderId + '"][data-product-id="' + productId + '"]');
+    const chevron = toggleBtn.querySelector('.accessories-chevron');
+    const expanded = row.style.display === 'table-row';
+    row.style.display = expanded ? 'none' : 'table-row';
+    chevron.style.transform = expanded ? 'rotate(0deg)' : 'rotate(180deg)';
+    toggleBtn.setAttribute('aria-expanded', !expanded);
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -459,6 +540,25 @@ button[name="delete_all_orders"]:active {
 .status-confirmed {
     background: #172554;
     color: #fff;
+}
+.accessories-toggle-btn {
+    background: #16234d;
+    color: #fff;
+    border: none;
+    border-radius: 16px;
+    padding: 0.25em 0.9em;
+    font-size: 0.95em;
+    display: flex;
+    align-items: center;
+    gap: 0.4em;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.accessories-toggle-btn:hover {
+    background: #23336d;
+}
+.accessories-chevron {
+    transition: transform 0.2s;
 }
 </style>
 

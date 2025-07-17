@@ -218,8 +218,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
                 // Insert order
-                $stmt = $pdo->prepare('INSERT INTO orders (user_id, company_id, total_ksh, created_at) VALUES (?, ?, ?, NOW())');
-                $stmt->execute([$userId, $companyId, $totalKsh]);
+                $now = date('Y-m-d H:i:s');
+                $stmt = $pdo->prepare('INSERT INTO orders (user_id, company_id, total_ksh, created_at) VALUES (?, ?, ?, ?)');
+                $stmt->execute([$userId, $companyId, $totalKsh, $now]);
                 $orderId = $pdo->lastInsertId();
                 // Insert order items
                 foreach ($_SESSION['cart'] as $productId => $qty) {
@@ -262,6 +263,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 }
+                
+                // Insert vehicle type if selected
+                if (isset($_POST['vehicle_type']) && !empty($_POST['vehicle_type'])) {
+                    $vehicleType = sanitize($_POST['vehicle_type']);
+                    $stmt4 = $pdo->prepare('INSERT INTO order_vehicle_types (order_id, vehicle_type, created_at) VALUES (?, ?, NOW())');
+                    $stmt4->execute([$orderId, $vehicleType]);
+                }
+                
                 // Clear cart and delivery details
                 unset($_SESSION['cart']);
                 unset($_SESSION['cart_accessories']);

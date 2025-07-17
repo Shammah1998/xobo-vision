@@ -433,17 +433,17 @@ include '../includes/header.php';
              </div>
              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 6px;">
                  <div><strong>Order ID:</strong> #<?php echo str_pad($orderId, 6, '0', STR_PAD_LEFT); ?></div>
-                 <div><strong>Current Status:</strong> <?php echo ucfirst($order['status']); ?></div>
-                 <div><strong>Order Total:</strong> KSH <?php echo number_format($order['total_ksh'], 2); ?></div>
-                 <div><strong>Created:</strong> <?php echo date('M j, Y H:i', strtotime($order['created_at'])); ?></div>
-                 <div><strong>Company ID:</strong> <?php echo $order['company_id']; ?></div>
-                 <div><strong>Items Count:</strong> <?php echo count($orderItems); ?></div>
+                 <div><strong>Current Status:</strong> <?php echo ucfirst($order['status'] ?? ''); ?></div>
+                 <div><strong>Order Total:</strong> KSH <?php echo number_format($order['total_ksh'] ?? 0, 2); ?></div>
+                 <div><strong>Created:</strong> <?php echo !empty($order['created_at']) ? date('M j, Y H:i', strtotime($order['created_at'])) : '-'; ?></div>
+                 <div><strong>Company ID:</strong> <?php echo $order['company_id'] ?? '-'; ?></div>
+                 <div><strong>Items Count:</strong> <?php echo is_array($orderItems) ? count($orderItems) : 0; ?></div>
              </div>
          </div>
 
                  <div class="edit-section">
              <h3><i class="fas fa-boxes"></i> Order Items</h3>
-             <?php if (empty($orderItems)): ?>
+             <?php if (empty($orderItems) || !is_array($orderItems)): ?>
                  <div class="alert alert-error">
                      <i class="fas fa-exclamation-triangle"></i> No items found for this order. This may indicate a data issue.
                  </div>
@@ -490,11 +490,11 @@ include '../includes/header.php';
                              <td colspan="5" style="text-align: right;"><strong>Calculated Total:</strong></td>
                              <td><strong>KSH <?php echo number_format($calculatedTotal, 2); ?></strong></td>
                          </tr>
-                         <?php if (abs($calculatedTotal - $order['total_ksh']) > 0.01): ?>
+                         <?php if (abs($calculatedTotal - ($order['total_ksh'] ?? 0)) > 0.01): ?>
                              <tr style="background: #fff3cd; color: #856404;">
                                  <td colspan="6" style="text-align: center;">
                                      <i class="fas fa-exclamation-triangle"></i> 
-                                     Note: Calculated total (<?php echo number_format($calculatedTotal, 2); ?>) differs from stored total (<?php echo number_format($order['total_ksh'], 2); ?>)
+                                     Note: Calculated total (<?php echo number_format($calculatedTotal, 2); ?>) differs from stored total (<?php echo number_format($order['total_ksh'] ?? 0, 2); ?>)
                                  </td>
                              </tr>
                          <?php endif; ?>

@@ -5,15 +5,14 @@
 
 Options -MultiViews
 RewriteEngine On
+
+# === ENVIRONMENT SWITCH ===
+# For LOCAL development (e.g., http://localhost/xobo-c/), use:
 RewriteBase /xobo-c/
+ErrorDocument 404 /xobo-c/404.php
+# For PRODUCTION (domain root, e.g., https://panel.xobodelivery.co.ke/), use:
 # RewriteBase /
-
-# For subdomain root, no RewriteBase needed (or use /)
-# RewriteBase /
-
-# Ensure HTTPS (uncomment for production)
-# RewriteCond %{HTTPS} off
-# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# ErrorDocument 404 /404.php
 
 # Remove trailing slashes
 RewriteCond %{REQUEST_FILENAME} !-d
@@ -28,9 +27,6 @@ RewriteRule ^profile/?$ profile.php [L]
 
 # Invite user page masking
 RewriteRule ^invite-user/?$ invite-user.php [L]
-
-# Handle 404 errors
-ErrorDocument 404 /xobo-c/404
 
 # Security headers
 <IfModule mod_headers.c>
@@ -70,7 +66,6 @@ RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Exclude admin directory from PHP extension rewrite
 # If the request does not contain a file extension and a .php file exists, rewrite to .php
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
