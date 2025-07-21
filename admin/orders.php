@@ -149,6 +149,9 @@ if ($orderIds) {
         <?php if ($orderIdSearch || $fromDate || $toDate): ?>
             <a href="orders.php" class="btn btn-secondary" style="min-width: 100px; height: 40px; text-align: center; display: inline-flex; align-items: center; justify-content: center;">Clear</a>
         <?php endif; ?>
+        <button type="button" id="download-csv-btn" class="btn btn-secondary" style="min-width: 140px; height: 40px; text-align: center; display: inline-flex; align-items: center; justify-content: center;">
+            <i class="fas fa-download" style="margin-right: 0.4em;"></i> Download CSV
+        </button>
     </form>
     <?php if (!empty($message)): ?>
         <div class="alert alert-success" style="margin-bottom:1rem;"><?php echo htmlspecialchars($message); ?></div>
@@ -491,7 +494,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('download-csv-btn').addEventListener('click', function() {
         const params = new URLSearchParams(window.location.search);
-        window.location.href = 'export-orders?' + params.toString();
+        window.location.href = 'export-orders.php?' + params.toString();
     });
 });
 </script>
