@@ -954,12 +954,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle add to cart button
     addToCartBtn.addEventListener('click', function() {
         const checkedBoxes = document.querySelectorAll('.product-checkbox:checked');
-        // Prevent proceeding if accessories are selected but Vision Plus Accessories is not checked
-        const checkedAccessoryCheckboxes = accessoriesRow ? accessoriesRow.querySelectorAll('.product-checkbox:checked') : [];
-        if (checkedAccessoryCheckboxes.length > 0 && (!visionPlusCheckbox || !visionPlusCheckbox.checked)) {
-            alert('You must select the "Vision Plus Accessories" box. This is because you have selected items to be included in the box.');
-            return;
-        }
         
         if (checkedBoxes.length === 0) {
             alert('Please select at least one product to add to cart.');
@@ -968,6 +962,22 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Check if Vision Plus Accessories is selected
         const visionPlusSelected = visionPlusCheckbox && visionPlusCheckbox.checked;
+        
+        // If Vision Plus Accessories is selected, check if at least one accessory is selected
+        if (visionPlusSelected) {
+            const checkedAccessoryCheckboxes = accessoriesRow ? accessoriesRow.querySelectorAll('.product-checkbox:checked') : [];
+            if (checkedAccessoryCheckboxes.length === 0) {
+                alert('You must select at least one accessory from the Vision Plus Accessories dropdown before adding to cart.');
+                return;
+            }
+        }
+        
+        // Prevent proceeding if accessories are selected but Vision Plus Accessories is not checked
+        const checkedAccessoryCheckboxes = accessoriesRow ? accessoriesRow.querySelectorAll('.product-checkbox:checked') : [];
+        if (checkedAccessoryCheckboxes.length > 0 && (!visionPlusCheckbox || !visionPlusCheckbox.checked)) {
+            alert('You must select the "Vision Plus Accessories" box. This is because you have selected items to be included in the box.');
+            return;
+        }
         
         // Collect all regular products (exclude accessories from dropdown)
         const regularProducts = Array.from(checkedBoxes).filter(checkbox => {
@@ -1052,6 +1062,44 @@ document.addEventListener('DOMContentLoaded', function() {
     // Accessories dropdown logic
     const accessoriesRow = document.querySelector('.accessories-dropdown-row');
     let toggleAccessoriesDropdownBtn = document.querySelector('.accessories-toggle-btn');
+    
+    // Handle Vision Plus checkbox change to show/hide dropdown
+    if (visionPlusCheckbox && accessoriesRow) {
+        visionPlusCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                // Show dropdown when Vision Plus is checked
+                accessoriesRow.style.display = '';
+                // Update toggle button state
+                if (toggleAccessoriesDropdownBtn) {
+                    toggleAccessoriesDropdownBtn.classList.add('expanded');
+                    const icon = toggleAccessoriesDropdownBtn.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-up');
+                    }
+                }
+            } else {
+                // Hide dropdown when Vision Plus is unchecked
+                accessoriesRow.style.display = 'none';
+                // Update toggle button state
+                if (toggleAccessoriesDropdownBtn) {
+                    toggleAccessoriesDropdownBtn.classList.remove('expanded');
+                    const icon = toggleAccessoriesDropdownBtn.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-up');
+                        icon.classList.add('fa-chevron-down');
+                    }
+                }
+                // Uncheck all accessories when Vision Plus is unchecked
+                const accessoryCheckboxes = accessoriesRow.querySelectorAll('.product-checkbox');
+                accessoryCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                updateSelection();
+            }
+        });
+    }
+    
     if (accessoriesRow && toggleAccessoriesDropdownBtn) {
         // On page load, sync icon and button state with dropdown visibility
         const icon = toggleAccessoriesDropdownBtn.querySelector('i');

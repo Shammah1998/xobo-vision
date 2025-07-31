@@ -17,19 +17,41 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['assign_driver_order_
 
 $orderId = (int)$_POST['assign_driver_order_id'];
 $driverName = trim($_POST['driver_name']);
+
 if ($orderId <= 0 || $driverName === '') {
     echo json_encode(['success' => false, 'error' => 'Invalid input']);
     exit;
 }
 
-$stmt = $pdo->prepare('SELECT id FROM drivers WHERE order_id = ?');
-$stmt->execute([$orderId]);
-if ($stmt->fetch()) {
-    $stmt = $pdo->prepare('UPDATE drivers SET driver_name = ?, assigned_at = NOW() WHERE order_id = ?');
-    $stmt->execute([$driverName, $orderId]);
-} else {
-    $stmt = $pdo->prepare('INSERT INTO drivers (order_id, driver_name) VALUES (?, ?)');
-    $stmt->execute([$orderId, $driverName]);
-}
+try {
+    // First check if the order exists
+    $stmt = $pdo->prepare('SELECT id FROM orders WHERE id = ?');
+    $stmt->execute([$orderId]);
+    if (!$stmt->fetch()) {
+        echo json_encode(['success' => false, 'error' => 'Order not found']);
+        exit;
+    }
 
-echo json_encode(['success' => true, 'driver_name' => htmlspecialchars($driverName)]); 
+    // Check if driver already exists for this order
+    $stmt = $pdo->prepare('SELECT id FROM drivers WHERE order_id = ?');
+    $stmt->execute([$orderId]);
+    
+    if ($stmt->fetch()) {
+        // Update existing driver
+        $stmt = $pdo->prepare('UPDATE drivers SET driver_name = ?, assigned_at = NOW() WHERE order_id = ?');
+        $result = $stmt->execute([$driverName, $orderId]);
+    } else {
+        // Insert new driver
+        $stmt = $pdo->prepare('INSERT INTO drivers (order_id, driver_name, assigned_at) VALUES (?, ?, NOW())');
+        $result = $stmt->execute([$orderId, $driverName]);
+    }
+
+    if ($result) {
+        echo json_encode(['success' => true, 'driver_name' => htmlspecialchars($driverName)]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Database operation failed']);
+    }
+} catch (PDOException $e) {
+    error_log("Driver assignment error: " . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'Database error occurred']);
+} 

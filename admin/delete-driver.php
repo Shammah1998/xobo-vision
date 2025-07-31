@@ -27,7 +27,33 @@ if ($orderId <= 0) {
     exit;
 }
 
-$stmt = $pdo->prepare('DELETE FROM drivers WHERE order_id = ?');
-$success = $stmt->execute([$orderId]);
+try {
+    // First check if the order exists
+    $stmt = $pdo->prepare('SELECT id FROM orders WHERE id = ?');
+    $stmt->execute([$orderId]);
+    if (!$stmt->fetch()) {
+        echo json_encode(['success' => false, 'error' => 'Order not found']);
+        exit;
+    }
 
-echo json_encode(['success' => $success]); 
+    // Check if driver exists for this order
+    $stmt = $pdo->prepare('SELECT id FROM drivers WHERE order_id = ?');
+    $stmt->execute([$orderId]);
+    if (!$stmt->fetch()) {
+        echo json_encode(['success' => false, 'error' => 'No driver assigned to this order']);
+        exit;
+    }
+
+    // Delete the driver
+    $stmt = $pdo->prepare('DELETE FROM drivers WHERE order_id = ?');
+    $success = $stmt->execute([$orderId]);
+
+    if ($success) {
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Failed to delete driver']);
+    }
+} catch (PDOException $e) {
+    error_log("Driver deletion error: " . $e->getMessage());
+    echo json_encode(['success' => false, 'error' => 'Database error occurred']);
+} 

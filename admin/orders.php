@@ -6,17 +6,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['assign_driver_order_i
     $orderId = (int)$_POST['assign_driver_order_id'];
     $driverName = trim($_POST['driver_name']);
     if ($orderId > 0 && $driverName !== '') {
-        $stmt = $pdo->prepare('SELECT id FROM drivers WHERE order_id = ?');
-        $stmt->execute([$orderId]);
-        if ($stmt->fetch()) {
-            $stmt = $pdo->prepare('UPDATE drivers SET driver_name = ?, assigned_at = NOW() WHERE order_id = ?');
-            $stmt->execute([$driverName, $orderId]);
-        } else {
-            $stmt = $pdo->prepare('INSERT INTO drivers (order_id, driver_name) VALUES (?, ?)');
-            $stmt->execute([$orderId, $driverName]);
+        try {
+            $stmt = $pdo->prepare('SELECT id FROM drivers WHERE order_id = ?');
+            $stmt->execute([$orderId]);
+            if ($stmt->fetch()) {
+                $stmt = $pdo->prepare('UPDATE drivers SET driver_name = ?, assigned_at = NOW() WHERE order_id = ?');
+                $stmt->execute([$driverName, $orderId]);
+            } else {
+                $stmt = $pdo->prepare('INSERT INTO drivers (order_id, driver_name, assigned_at) VALUES (?, ?, NOW())');
+                $stmt->execute([$orderId, $driverName]);
+            }
+        } catch (PDOException $e) {
+            // Log error for debugging
+            error_log("Driver assignment error: " . $e->getMessage());
         }
     }
-    header('Location: orders');
+    header('Location: orders.php');
     exit;
 }
 
@@ -33,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_all_orders']) 
         $pdo->exec('DELETE FROM delivery_details');
         $pdo->exec('DELETE FROM drivers');
         $pdo->exec('DELETE FROM order_vehicle_types');
+        $pdo->exec('DELETE FROM order_accessories');
         $pdo->exec('DELETE FROM orders');
         $message = 'All orders and related data have been deleted.';
     } catch (PDOException $e) {
@@ -45,9 +51,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status_order_i
     $orderId = (int)$_POST['update_status_order_id'];
     $newStatus = $_POST['order_status'];
     if (in_array($newStatus, ['pending', 'confirmed'])) {
-        $stmt = $pdo->prepare('UPDATE orders SET status = ? WHERE id = ?');
-        $stmt->execute([$newStatus, $orderId]);
-        $message = 'Order status updated.';
+        try {
+            $stmt = $pdo->prepare('UPDATE orders SET status = ? WHERE id = ?');
+            $stmt->execute([$newStatus, $orderId]);
+            $message = 'Order status updated.';
+        } catch (PDOException $e) {
+            $message = 'Error updating order status: ' . $e->getMessage();
+        }
     }
 }
 
@@ -80,16 +90,21 @@ if ($fromDate && $toDate) {
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
 // Fetch all orders with company and user info
-$stmt = $pdo->prepare('
-    SELECT o.id, o.total_ksh, o.created_at, c.name AS company_name, u.email AS user_email, o.address
-    FROM orders o
-    JOIN companies c ON o.company_id = c.id
-    JOIN users u ON o.user_id = u.id
-    ' . $whereClause . '
-    ORDER BY o.created_at DESC
-');
-$stmt->execute($params);
-$orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $pdo->prepare('
+        SELECT o.id, o.total_ksh, o.created_at, c.name AS company_name, u.email AS user_email, o.address, o.status
+        FROM orders o
+        JOIN companies c ON o.company_id = c.id
+        JOIN users u ON o.user_id = u.id
+        ' . $whereClause . '
+        ORDER BY o.created_at DESC
+    ');
+    $stmt->execute($params);
+    $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    error_log("Error fetching orders: " . $e->getMessage());
+    $orders = [];
+}
 
 // Fetch all order items for all orders
 $orderIds = array_column($orders, 'id');
@@ -98,43 +113,52 @@ $deliveryDetails = [];
 $drivers = [];
 $vehicleTypes = [];
 $accessories = [];
+
 if ($orderIds) {
-    $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
-    // Order items
-    $stmt = $pdo->prepare('
-        SELECT oi.order_id, p.name, p.sku, oi.quantity, oi.line_total, p.id as product_id
-        FROM order_items oi
-        JOIN products p ON oi.product_id = p.id
-        WHERE oi.order_id IN (' . $placeholders . ')
-    ');
-    $stmt->execute($orderIds);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $item) {
-        $orderItems[$item['order_id']][] = $item;
-    }
-    // Delivery details
-    $stmt = $pdo->prepare('SELECT * FROM order_delivery_details WHERE order_id IN (' . $placeholders . ')');
-    $stmt->execute($orderIds);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
-        $deliveryDetails[$d['order_id']][$d['product_id']] = $d;
-    }
-    // Drivers
-    $stmt = $pdo->prepare('SELECT order_id, driver_name FROM drivers WHERE order_id IN (' . $placeholders . ')');
-    $stmt->execute($orderIds);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
-        $drivers[$d['order_id']] = $d['driver_name'];
-    }
-    // Vehicle types
-    $stmt = $pdo->prepare('SELECT order_id, vehicle_type FROM order_vehicle_types WHERE order_id IN (' . $placeholders . ')');
-    $stmt->execute($orderIds);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $v) {
-        $vehicleTypes[$v['order_id']] = $v['vehicle_type'];
-    }
-    
-    // Accessories
-    $stmt = $pdo->prepare('SELECT order_id, main_product_id, accessory_name, accessory_sku, accessory_weight FROM order_accessories WHERE order_id IN (' . $placeholders . ')');
-    $stmt->execute($orderIds);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $acc) {
-        $accessories[$acc['order_id']][$acc['main_product_id']][] = $acc;
+    try {
+        $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+        
+        // Order items
+        $stmt = $pdo->prepare('
+            SELECT oi.order_id, p.name, p.sku, oi.quantity, oi.line_total, p.id as product_id
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id IN (' . $placeholders . ')
+        ');
+        $stmt->execute($orderIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $item) {
+            $orderItems[$item['order_id']][] = $item;
+        }
+        
+        // Delivery details
+        $stmt = $pdo->prepare('SELECT * FROM order_delivery_details WHERE order_id IN (' . $placeholders . ')');
+        $stmt->execute($orderIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
+            $deliveryDetails[$d['order_id']][$d['product_id']] = $d;
+        }
+        
+        // Drivers
+        $stmt = $pdo->prepare('SELECT order_id, driver_name FROM drivers WHERE order_id IN (' . $placeholders . ')');
+        $stmt->execute($orderIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $d) {
+            $drivers[$d['order_id']] = $d['driver_name'];
+        }
+        
+        // Vehicle types
+        $stmt = $pdo->prepare('SELECT order_id, vehicle_type FROM order_vehicle_types WHERE order_id IN (' . $placeholders . ')');
+        $stmt->execute($orderIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $v) {
+            $vehicleTypes[$v['order_id']] = $v['vehicle_type'];
+        }
+        
+        // Accessories
+        $stmt = $pdo->prepare('SELECT order_id, main_product_id, accessory_name, accessory_sku, accessory_weight FROM order_accessories WHERE order_id IN (' . $placeholders . ')');
+        $stmt->execute($orderIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $acc) {
+            $accessories[$acc['order_id']][$acc['main_product_id']][] = $acc;
+        }
+    } catch (PDOException $e) {
+        error_log("Error fetching order details: " . $e->getMessage());
     }
 }
 ?>
@@ -173,11 +197,7 @@ if ($orderIds) {
             <?php if ($orders && count($orders) > 0): ?>
                 <?php foreach($orders as $order): ?>
                     <?php
-                    // Fetch order status for this order
-                    $stmtStatus = $pdo->prepare('SELECT status FROM orders WHERE id = ?');
-                    $stmtStatus->execute([$order['id']]);
-                    $orderStatusRow = $stmtStatus->fetch(PDO::FETCH_ASSOC);
-                    $orderStatus = $orderStatusRow['status'] ?? 'pending';
+                    $orderStatus = $order['status'] ?? 'pending';
                     ?>
                     <tr>
                         <td>#<?php echo htmlspecialchars($order['id']); ?></td>
@@ -186,10 +206,6 @@ if ($orderIds) {
                         <td><?php echo number_format($order['total_ksh'], 2); ?></td>
                         <td>
                             <?php
-                            $stmtStatus = $pdo->prepare('SELECT status FROM orders WHERE id = ?');
-                            $stmtStatus->execute([$order['id']]);
-                            $orderStatusRow = $stmtStatus->fetch(PDO::FETCH_ASSOC);
-                            $orderStatus = $orderStatusRow['status'] ?? 'pending';
                             $statusText = ucfirst($orderStatus);
                             if ($orderStatus === 'confirmed') {
                                 echo '<span style="display:inline-block;padding:0.3em 1.2em;border-radius:10px;font-size:1em;font-weight:600;color:#fff;background:#172554;text-transform:capitalize;min-width:90px;text-align:center;letter-spacing:0.01em;">' . $statusText . '</span>';
@@ -226,7 +242,12 @@ if ($orderIds) {
                                                     <td style="padding:0.5rem; vertical-align: top;">
                                                         <span style="display: inline-flex; align-items: center;">
                                                             <?php echo htmlspecialchars($item['name']); ?>
-                                                            <?php if (strtolower(trim($item['name'])) === 'vision plus accessories' && isset($accessories[$order['id']][$item['product_id']])): ?>
+                                                            <?php 
+                                                            // Only show accessories button for "vision plus accessories" product
+                                                            $productNameLower = strtolower(trim($item['name']));
+                                                            $isAccessoriesProduct = ($productNameLower === 'vision plus accessories');
+                                                            if ($isAccessoriesProduct && isset($accessories[$order['id']][$item['product_id']])): 
+                                                            ?>
                                                                 <button
                                                                     type="button"
                                                                     class="accessories-toggle-btn"
@@ -339,13 +360,6 @@ if ($orderIds) {
                                         <strong>Order Address:</strong> <?php echo htmlspecialchars($order['address']); ?>
                                     </div>
                                 <?php endif; ?>
-                                <?php
-                                // Fetch order status for this order
-                                $stmtStatus = $pdo->prepare('SELECT status FROM orders WHERE id = ?');
-                                $stmtStatus->execute([$order['id']]);
-                                $orderStatusRow = $stmtStatus->fetch(PDO::FETCH_ASSOC);
-                                $orderStatus = $orderStatusRow['status'] ?? 'pending';
-                                ?>
                                 <div style="margin-top:1.5rem; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 1rem;">
                                     <?php if (in_array($orderStatus, ['confirmed'])): ?>
                                     <form method="POST" class="assign-driver-form" data-order-id="<?php echo $order['id']; ?>" style="display:flex; gap:1rem; align-items:center; margin:0;">
@@ -423,7 +437,9 @@ document.addEventListener('DOMContentLoaded', function() {
             var orderId = btn.getAttribute('data-order-id');
             var driverSpan = btn.closest('span');
             var driverInput = document.getElementById('driver_name_' + orderId);
-            fetch('delete-driver', {
+            
+            // Use the full path to the delete-driver.php file
+            fetch('delete-driver.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'order_id=' + encodeURIComponent(orderId)
@@ -434,10 +450,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     driverSpan.remove();
                     if (driverInput) driverInput.value = '';
                 } else {
-                    alert('Failed to remove driver.');
+                    alert('Failed to remove driver: ' + (data.error || 'Unknown error'));
                 }
             })
-            .catch(() => alert('Failed to remove driver.'));
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to remove driver. Please try again.');
+            });
         }
     });
 
@@ -454,7 +473,9 @@ document.addEventListener('DOMContentLoaded', function() {
             var btn = form.querySelector('button[type="submit"]');
             btn.disabled = true;
             btn.textContent = 'Saving...';
-            fetch('assign-driver', {
+            
+            // Use the full path to the assign-driver.php file
+            fetch('assign-driver.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: 'assign_driver_order_id=' + encodeURIComponent(orderId) + '&driver_name=' + encodeURIComponent(driverName)
@@ -484,10 +505,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert(data.error || 'Failed to assign driver.');
                 }
             })
-            .catch(() => {
+            .catch(error => {
+                console.error('Error:', error);
                 btn.disabled = false;
                 btn.textContent = 'Assign';
-                alert('Failed to assign driver.');
+                alert('Failed to assign driver. Please try again.');
             });
         });
     });
